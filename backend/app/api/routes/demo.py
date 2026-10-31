@@ -26,10 +26,40 @@ from app.core.logger import get_logger
 log = get_logger(__name__)
 router = APIRouter(prefix="/demo", tags=["Demo"])
 
-# Path to demo firmware directory — resolve relative to project root
-# __file__ is backend/app/api/routes/demo.py → go up 4 levels to project root
-_PROJECT_ROOT = Path(__file__).resolve().parents[4]
-DEMO_DIR = _PROJECT_ROOT / "datasets" / "demo_firmware"
+
+def _find_project_root() -> Path:
+    """Find the repo root regardless of the current working directory."""
+    candidate_roots = [
+        Path(__file__).resolve().parents[4],
+        Path(__file__).resolve().parents[3],
+        Path.cwd(),
+    ]
+    for candidate in candidate_roots:
+        if (candidate / "datasets" / "demo_firmware").exists():
+            return candidate
+        if candidate.name == "backend" and (candidate.parent / "datasets" / "demo_firmware").exists():
+            return candidate.parent
+    return candidate_roots[0]
+
+
+PROJECT_ROOT = _find_project_root()
+DEMO_DIR = PROJECT_ROOT / "datasets" / "demo_firmware"
+
+
+def _resolve_demo_file(filename: str) -> Path:
+    """Resolve a demo firmware file from the repo root with a safe fallback."""
+    candidates = [
+        DEMO_DIR / filename,
+        PROJECT_ROOT / "datasets" / "demo_firmware" / filename,
+        PROJECT_ROOT / "backend" / "datasets" / "demo_firmware" / filename,
+        Path.cwd() / "datasets" / "demo_firmware" / filename,
+    ]
+    for candidate in candidates:
+        resolved = candidate.resolve(strict=False)
+        if resolved.exists():
+            return resolved
+    return (DEMO_DIR / filename).resolve(strict=False)
+
 
 # Canonical sample definitions (embedded so the endpoint always works)
 DEMO_SAMPLES = [
@@ -118,22 +148,23 @@ async def load_demo_sample(sample_id: str) -> DemoLoadResponse:
             detail=f"Demo sample '{sample_id}' not found. Available: {[s['id'] for s in DEMO_SAMPLES]}",
         )
 
-    src_file = DEMO_DIR / sample["filename"]
+    src_file = _resolve_demo_file(sample["filename"])
     if not src_file.exists():
         raise HTTPException(
-            status_code=500,
+            status_code=404,
             detail=f"Demo firmware file '{src_file}' missing from repository.",
         )
 
-    # Create a fresh upload session
     upload_id = str(uuid4())
     dest_dir = Path(settings.upload_dir) / upload_id
     dest_dir.mkdir(parents=True, exist_ok=True)
     dest_file = dest_dir / sample["filename"]
     shutil.copy2(src_file, dest_file)
 
-    # Load expected.json if present
     expected_path = DEMO_DIR / f"{sample_id}_expected.json"
+    if not expected_path.exists():
+        expected_path = src_file.with_name(f"{sample_id}_expected.json")
+
     expected: dict = {}
     if expected_path.exists():
         with open(expected_path, "r", encoding="utf-8") as f:
