@@ -1,9 +1,6 @@
 /**
  * pages/AnalysisPage.jsx — M1 Vulnerability Analysis (Step 2)
- *
- * Fetches and displays detected vulnerabilities from the backend.
- * Shows severity summary and vulnerability cards. "Run Full Pipeline"
- * triggers the complete M1→M2→M3→M4 pipeline via SSE streaming.
+ * Premium vulnerability display with SSE pipeline streaming.
  */
 
 import React, { useEffect, useState } from 'react'
@@ -12,54 +9,181 @@ import { analyzeFirmware, streamPipeline } from '../services/api'
 import { usePipeline } from '../store/pipelineStore'
 
 const SEVERITY_CONFIG = {
-  Critical: { cls: 'badge-critical', bg: 'bg-red-900/20 border-red-700/30',    dot: 'bg-red-400'    },
-  High:     { cls: 'badge-high',     bg: 'bg-orange-900/20 border-orange-700/30', dot: 'bg-orange-400' },
-  Medium:   { cls: 'badge-medium',   bg: 'bg-yellow-900/20 border-yellow-700/30', dot: 'bg-yellow-400' },
-  Low:      { cls: 'badge-low',      bg: 'bg-green-900/20 border-green-700/30',  dot: 'bg-green-400'  },
+  Critical: {
+    cls: 'badge-critical',
+    bg: 'rgba(239,68,68,0.06)',
+    border: 'rgba(239,68,68,0.2)',
+    dot: '#f87171',
+    glow: 'rgba(239,68,68,0.1)',
+    countColor: 'text-red-300',
+    icon: '🔴',
+  },
+  High: {
+    cls: 'badge-high',
+    bg: 'rgba(249,115,22,0.06)',
+    border: 'rgba(249,115,22,0.2)',
+    dot: '#fb923c',
+    glow: 'rgba(249,115,22,0.1)',
+    countColor: 'text-orange-300',
+    icon: '🟠',
+  },
+  Medium: {
+    cls: 'badge-medium',
+    bg: 'rgba(234,179,8,0.06)',
+    border: 'rgba(234,179,8,0.2)',
+    dot: '#fde047',
+    glow: 'rgba(234,179,8,0.1)',
+    countColor: 'text-yellow-300',
+    icon: '🟡',
+  },
+  Low: {
+    cls: 'badge-low',
+    bg: 'rgba(22,163,74,0.06)',
+    border: 'rgba(22,163,74,0.2)',
+    dot: '#4ade80',
+    glow: 'rgba(22,163,74,0.1)',
+    countColor: 'text-shield-300',
+    icon: '🟢',
+  },
 }
 
 function VulnCard({ vuln, index }) {
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(index === 0)
   const cfg = SEVERITY_CONFIG[vuln.severity] || SEVERITY_CONFIG.Low
+
   return (
-    <div className={`card border animate-slide-up ${cfg.bg} transition-all`} style={{ animationDelay: `${index * 60}ms` }}>
-      <div className="flex items-start justify-between gap-3 cursor-pointer" onClick={() => setOpen(o => !o)}>
+    <div
+      className="rounded-2xl overflow-hidden transition-all duration-300 animate-slide-up"
+      style={{
+        background: cfg.bg,
+        border: `1px solid ${cfg.border}`,
+        animationDelay: `${index * 70}ms`,
+      }}
+    >
+      {/* Header */}
+      <div
+        className="flex items-start justify-between p-4 cursor-pointer gap-3 group"
+        onClick={() => setOpen(o => !o)}
+      >
         <div className="flex items-start gap-3 min-w-0">
-          <div className={`mt-1 status-dot ${cfg.dot} shrink-0`} />
+          {/* Severity dot */}
+          <div
+            className="mt-1 w-2.5 h-2.5 rounded-full shrink-0"
+            style={{ background: cfg.dot, boxShadow: `0 0 8px ${cfg.glow}` }}
+          />
           <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap mb-1">
               <span className="font-bold text-dark-100 text-sm">{vuln.vuln_type}</span>
               <span className={cfg.cls}>{vuln.severity}</span>
-              <span className="font-mono text-xs text-dark-400">{vuln.cwe_id}</span>
+              <span className="font-mono text-xs text-dark-500">{vuln.cwe_id}</span>
             </div>
-            <p className="text-dark-300 text-xs truncate">{vuln.description}</p>
+            <p className="text-dark-400 text-xs leading-relaxed line-clamp-2">{vuln.description}</p>
           </div>
         </div>
         <div className="flex items-center gap-3 shrink-0">
-          <span className="text-xs text-dark-500 font-mono">L{vuln.line_start}</span>
-          <span className="text-dark-500 text-xs">{open ? '▲' : '▼'}</span>
+          <span
+            className="text-xs font-mono px-2 py-0.5 rounded-md text-dark-500"
+            style={{ background: 'rgba(255,255,255,0.05)' }}
+          >
+            L{vuln.line_start}
+          </span>
+          <span className="text-dark-600 text-xs transition-transform duration-200"
+            style={{ transform: open ? 'rotate(180deg)' : 'rotate(0deg)' }}
+          >
+            ▼
+          </span>
         </div>
       </div>
 
+      {/* Expandable body */}
       {open && (
-        <div className="mt-4 space-y-3 animate-fade-in">
-          <div>
+        <div className="px-4 pb-4 pt-0 space-y-4 animate-fade-in border-t" style={{ borderColor: `${cfg.border}` }}>
+          {/* Root cause */}
+          <div className="pt-4">
             <div className="section-label">Root Cause</div>
             <p className="text-sm text-dark-200 leading-relaxed">{vuln.root_cause}</p>
           </div>
+
+          {/* Code snippet */}
           {vuln.code_snippet && (
             <div>
               <div className="section-label">Vulnerable Code</div>
-              <pre className="code-block text-xs overflow-x-auto">{vuln.code_snippet}</pre>
+              <div className="code-block">
+                <span className="diff-del">{vuln.code_snippet}</span>
+              </div>
             </div>
           )}
-          <div className="flex items-center gap-4 text-xs text-dark-500">
-            <span>📂 {vuln.file_path?.split(/[\\/]/).pop() || 'unknown'}</span>
-            <span>🔧 {vuln.function_name || 'unknown'}</span>
-            <span>🎯 {Math.round((vuln.confidence || 1) * 100)}% confidence</span>
+
+          {/* Meta */}
+          <div className="flex flex-wrap items-center gap-4 pt-1">
+            <span className="flex items-center gap-1.5 text-xs text-dark-500">
+              <span>📂</span>
+              <span className="font-mono">{vuln.file_path?.split(/[/\\]/).pop() || 'unknown'}</span>
+            </span>
+            {vuln.function_name && vuln.function_name !== 'unknown_function' && (
+              <span className="flex items-center gap-1.5 text-xs text-dark-500">
+                <span>⚙️</span>
+                <span className="font-mono">{vuln.function_name}()</span>
+              </span>
+            )}
+            <span className="flex items-center gap-1.5 text-xs text-dark-500">
+              <span>🎯</span>
+              <span>{Math.round((vuln.confidence || 1) * 100)}% confidence</span>
+            </span>
           </div>
         </div>
       )}
+    </div>
+  )
+}
+
+function SSELog({ messages, running }) {
+  const ref = React.useRef(null)
+  useEffect(() => {
+    if (ref.current) ref.current.scrollTop = ref.current.scrollHeight
+  }, [messages])
+
+  if (!running && messages.length === 0) return null
+
+  return (
+    <div className="card mb-6 animate-slide-up">
+      <div className="flex items-center gap-3 mb-3">
+        {running ? (
+          <>
+            <div className="status-dot-running" />
+            <span className="font-semibold text-sm text-cyber-300">Pipeline Running…</span>
+          </>
+        ) : (
+          <>
+            <span className="text-shield-400">✓</span>
+            <span className="font-semibold text-sm text-dark-200">Pipeline Complete</span>
+          </>
+        )}
+      </div>
+      <div
+        ref={ref}
+        className="space-y-1 max-h-44 overflow-y-auto scrollbar-thin rounded-lg p-3"
+        style={{ background: 'rgba(2,6,23,0.6)', border: '1px solid rgba(255,255,255,0.05)' }}
+      >
+        {messages.map((m, i) => (
+          <div key={i} className="flex items-start gap-2 text-xs leading-relaxed">
+            <span className="text-dark-700 font-mono shrink-0 text-[10px] mt-0.5">{m.ts}</span>
+            <span className={`font-bold shrink-0 text-[10px] uppercase tracking-wider ${
+              m.event === 'complete' ? 'text-shield-400' :
+              m.event === 'error' ? 'text-red-400' :
+              m.status === 'done' ? 'text-shield-500' : 'text-cyber-400'
+            }`}>
+              [{m.event || m.step}]
+            </span>
+            <span className="text-dark-300">{m.message || JSON.stringify(m).slice(0, 100)}</span>
+          </div>
+        ))}
+        {running && (
+          <div className="flex items-center gap-2 text-xs text-cyber-400/60 pt-1">
+            <div className="spinner w-2.5 h-2.5" /> <span>Streaming…</span>
+          </div>
+        )}
+      </div>
     </div>
   )
 }
@@ -74,7 +198,7 @@ export default function AnalysisPage() {
 
   useEffect(() => {
     if (!state.uploadId) return
-    if (state.vulnerabilities.length > 0) return  // already fetched
+    if (state.vulnerabilities.length > 0) return
 
     setLoading(true)
     setError(null)
@@ -87,14 +211,14 @@ export default function AnalysisPage() {
   }, [state.uploadId])
 
   const runFullPipeline = () => {
-    if (!state.uploadId) return
+    if (!state.uploadId || pipelineRunning) return
     setPipelineRunning(true)
     setSseMessages([])
     dispatch({ type: 'CLEAR_SSE_LOG' })
 
     const es = streamPipeline(state.uploadId, (eventName, data) => {
       const msg = { event: eventName, ...data, ts: new Date().toLocaleTimeString() }
-      setSseMessages(prev => [...prev.slice(-30), msg])
+      setSseMessages(prev => [...prev.slice(-40), msg])
       dispatch({ type: 'ADD_SSE_LOG', payload: msg })
 
       if (eventName === 'complete') {
@@ -105,7 +229,7 @@ export default function AnalysisPage() {
           if (data.result.patches) dispatch({ type: 'SET_PATCHES', payload: data.result.patches })
           if (data.result.verification_results) dispatch({ type: 'SET_VERIFICATIONS', payload: data.result.verification_results })
         }
-        setTimeout(() => navigate(`/report/${data.report_id || state.uploadId}`), 800)
+        setTimeout(() => navigate(`/report/${data.report_id || state.uploadId}`), 600)
       }
       if (eventName === 'error') {
         setPipelineRunning(false)
@@ -121,90 +245,110 @@ export default function AnalysisPage() {
   vulns.forEach(v => { if (counts[v.severity] !== undefined) counts[v.severity]++ })
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-8 animate-fade-in">
+    <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8 animate-fade-in">
+      {/* ── Header ── */}
       <div className="flex items-start justify-between mb-8 flex-wrap gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-dark-100 mb-1">🔍 M1 — Vulnerability Analysis</h1>
-          <p className="text-dark-400 text-sm">cppcheck · semgrep · pattern scan</p>
+          <div className="flex items-center gap-3 mb-1">
+            <div
+              className="w-9 h-9 rounded-xl flex items-center justify-center text-lg"
+              style={{ background: 'rgba(14,165,233,0.12)', border: '1px solid rgba(14,165,233,0.2)' }}
+            >
+              🔍
+            </div>
+            <h1 className="text-2xl font-bold text-dark-100">M1 — Vulnerability Analysis</h1>
+          </div>
+          <p className="text-dark-500 text-sm ml-12">cppcheck · semgrep · regex pattern scanner</p>
         </div>
         <div className="flex gap-2">
-          <button className="btn-secondary" onClick={() => navigate('/')}>← Back</button>
+          <button className="btn-secondary" onClick={() => navigate('/')}>← Upload</button>
           {vulns.length > 0 && (
             <button
               className="btn-primary"
               disabled={pipelineRunning}
               onClick={runFullPipeline}
+              id="run-pipeline-btn"
             >
-              {pipelineRunning ? <><div className="spinner" /> Running...</> : '▶ Run Full Pipeline'}
+              {pipelineRunning
+                ? <><div className="spinner" /> Running…</>
+                : <>▶ Run Full Pipeline</>
+              }
             </button>
           )}
         </div>
       </div>
 
-      {/* Severity summary */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
-        {Object.entries(counts).map(([sev, count]) => (
-          <div key={sev} className={`card text-center border ${SEVERITY_CONFIG[sev].bg}`}>
-            <div className="text-3xl font-bold text-dark-50 mb-1">{count}</div>
-            <span className={SEVERITY_CONFIG[sev].cls}>{sev}</span>
-          </div>
-        ))}
-      </div>
-
-      {/* SSE progress */}
-      {(pipelineRunning || sseMessages.length > 0) && (
-        <div className="card mb-6">
-          <div className="flex items-center gap-2 mb-3">
-            {pipelineRunning && <div className="status-dot-running" />}
-            <span className="font-semibold text-sm text-dark-100">Pipeline Progress</span>
-          </div>
-          <div className="space-y-1 max-h-40 overflow-y-auto scrollbar-thin">
-            {sseMessages.map((m, i) => (
-              <div key={i} className="flex items-start gap-2 text-xs">
-                <span className="text-dark-600 font-mono shrink-0">{m.ts}</span>
-                <span className={`font-medium shrink-0 ${
-                  m.event === 'complete' ? 'text-shield-400' :
-                  m.event === 'error' ? 'text-red-400' : 'text-cyber-400'
-                }`}>[{m.event}]</span>
-                <span className="text-dark-300">{m.message || JSON.stringify(m).slice(0, 80)}</span>
+      {/* ── Severity Summary Cards ── */}
+      {vulns.length > 0 && (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
+          {Object.entries(counts).map(([sev, count]) => {
+            const cfg = SEVERITY_CONFIG[sev]
+            return (
+              <div
+                key={sev}
+                className="metric-card"
+                style={{
+                  background: cfg.bg,
+                  border: `1px solid ${cfg.border}`,
+                }}
+              >
+                <div className="text-3xl font-black mb-1" style={{ color: cfg.dot }}>{count}</div>
+                <span className={cfg.cls}>{sev}</span>
               </div>
-            ))}
-          </div>
+            )
+          })}
         </div>
       )}
 
-      {/* Content */}
+      {/* ── SSE Progress ── */}
+      <SSELog messages={sseMessages} running={pipelineRunning} />
+
+      {/* ── Main Content ── */}
       {!state.uploadId ? (
-        <div className="card text-center py-16">
-          <div className="text-4xl mb-4">📭</div>
-          <p className="text-dark-300 mb-4">No firmware uploaded. Start with a file or demo sample.</p>
+        <div className="card text-center py-20">
+          <div className="text-5xl mb-4 animate-float">📭</div>
+          <p className="text-dark-400 mb-6 text-lg">No firmware session active.</p>
           <button className="btn-primary" onClick={() => navigate('/')}>Upload Firmware</button>
         </div>
       ) : loading ? (
-        <div className="card text-center py-16">
-          <div className="spinner w-10 h-10 mx-auto text-cyber-400 mb-4" />
-          <p className="text-dark-300">Running static analysis…</p>
+        <div className="card text-center py-20">
+          <div
+            className="spinner mx-auto text-cyber-400 mb-6"
+            style={{ width: 48, height: 48, borderWidth: 3 }}
+          />
+          <p className="text-dark-200 font-semibold text-lg mb-1">Running static analysis…</p>
+          <p className="text-dark-500 text-sm">Scanning for security vulnerabilities</p>
         </div>
       ) : error ? (
-        <div className="card text-center py-12">
-          <div className="text-4xl mb-4">⚠️</div>
-          <p className="text-red-300 mb-4">{error}</p>
+        <div className="card text-center py-16">
+          <div className="text-5xl mb-4">⚠️</div>
+          <p className="text-red-300 mb-4 text-lg">{error}</p>
           <button className="btn-secondary" onClick={() => window.location.reload()}>Retry</button>
         </div>
       ) : vulns.length === 0 ? (
-        <div className="card text-center py-16">
-          <div className="text-5xl mb-4">✅</div>
-          <p className="text-shield-300 font-semibold text-lg mb-2">No vulnerabilities detected!</p>
-          <p className="text-dark-400 text-sm">The firmware appears clean based on static analysis.</p>
+        <div className="card text-center py-20">
+          <div className="text-6xl mb-4">✅</div>
+          <p className="text-shield-300 font-bold text-xl mb-2">No vulnerabilities detected!</p>
+          <p className="text-dark-500 text-sm mb-6">Firmware appears clean based on static analysis.</p>
+          <button className="btn-secondary" onClick={() => navigate('/')}>Upload Another File</button>
         </div>
       ) : (
-        <div className="space-y-3">
-          <div className="section-label">{vulns.length} vulnerabilities found</div>
-          {vulns.map((v, i) => <VulnCard key={v.id} vuln={v} index={i} />)}
-          <div className="flex justify-end pt-2">
-            <button className="btn-primary" disabled={pipelineRunning} onClick={runFullPipeline}>
-              {pipelineRunning ? <><div className="spinner" /> Running...</> : '▶ Run Full Pipeline →'}
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <span className="section-label">{vulns.length} vulnerabilities detected</span>
+            <button
+              className="btn-primary"
+              disabled={pipelineRunning}
+              onClick={runFullPipeline}
+            >
+              {pipelineRunning
+                ? <><div className="spinner" /> Running…</>
+                : <>▶ Run Full Pipeline →</>
+              }
             </button>
+          </div>
+          <div className="space-y-3">
+            {vulns.map((v, i) => <VulnCard key={v.id || i} vuln={v} index={i} />)}
           </div>
         </div>
       )}

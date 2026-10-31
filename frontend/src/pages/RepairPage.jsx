@@ -1,8 +1,6 @@
 /**
  * pages/RepairPage.jsx — M2 Repair Patches (Step 3)
- *
- * Shows patches for each vulnerability with diff viewer,
- * strategy badge, attempt history, and chat refinement.
+ * Premium diff viewer with strategy badges and verification mini.
  */
 
 import React, { useState } from 'react'
@@ -15,22 +13,22 @@ function DiffViewer({ original, patched }) {
   const patchLines = (patched || '').split('\n')
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
       <div>
-        <div className="section-label text-red-400">Before (vulnerable)</div>
-        <pre className="code-block text-xs overflow-x-auto max-h-40">
+        <div className="section-label text-red-400">Before · Vulnerable</div>
+        <div className="code-block max-h-48 overflow-y-auto">
           {origLines.map((line, i) => (
-            <span key={i} className="diff-del block">{line || ' '}</span>
+            <span key={i} className="diff-del">- {line || ' '}</span>
           ))}
-        </pre>
+        </div>
       </div>
       <div>
-        <div className="section-label text-shield-400">After (patched)</div>
-        <pre className="code-block text-xs overflow-x-auto max-h-40">
+        <div className="section-label text-shield-400">After · Patched</div>
+        <div className="code-block max-h-48 overflow-y-auto">
           {patchLines.map((line, i) => (
-            <span key={i} className="diff-add block">{line || ' '}</span>
+            <span key={i} className="diff-add">+ {line || ' '}</span>
           ))}
-        </pre>
+        </div>
       </div>
     </div>
   )
@@ -44,18 +42,32 @@ function StrategyBadge({ strategy }) {
 
 function VerificationMini({ ver }) {
   if (!ver) return null
+  const checks = [
+    { label: 'Compile', passed: ver.compiles, icon: '🔨' },
+    { label: 'ASan',    passed: ver.sanitizer_passed, icon: '🧪' },
+    { label: 'No-Cheat',passed: ver.no_cheating_passed, icon: '🕵️' },
+  ]
   return (
-    <div className="flex items-center gap-3 text-xs">
-      <span className={ver.compiles ? 'text-shield-400' : 'text-red-400'}>
-        {ver.compiles ? '✓' : '✗'} Compiles
-      </span>
-      <span className={ver.sanitizer_passed ? 'text-shield-400' : 'text-red-400'}>
-        {ver.sanitizer_passed ? '✓' : '✗'} ASan
-      </span>
-      <span className={ver.no_cheating_passed ? 'text-shield-400' : 'text-red-400'}>
-        {ver.no_cheating_passed ? '✓' : '✗'} No-Cheat
-      </span>
-      <span className={`font-bold ${ver.overall_status === 'passed' ? 'text-shield-300' : 'text-red-300'}`}>
+    <div className="flex items-center gap-4 flex-wrap">
+      {checks.map(c => (
+        <span
+          key={c.label}
+          className="flex items-center gap-1.5 text-xs font-medium"
+          style={{ color: c.passed ? '#4ade80' : '#f87171' }}
+        >
+          <span>{c.icon}</span>
+          <span>{c.passed ? '✓' : '✗'}</span>
+          <span>{c.label}</span>
+        </span>
+      ))}
+      <span
+        className="text-xs font-black px-2 py-0.5 rounded-full"
+        style={{
+          background: ver.overall_status === 'passed' ? 'rgba(22,163,74,0.15)' : 'rgba(239,68,68,0.15)',
+          color: ver.overall_status === 'passed' ? '#4ade80' : '#f87171',
+          border: ver.overall_status === 'passed' ? '1px solid rgba(22,163,74,0.3)' : '1px solid rgba(239,68,68,0.3)',
+        }}
+      >
         {ver.overall_status?.toUpperCase()}
       </span>
     </div>
@@ -64,17 +76,25 @@ function VerificationMini({ ver }) {
 
 function PatchCard({ patch, verification, vuln, index }) {
   const [open, setOpen] = useState(index === 0)
+  const [showDiff, setShowDiff] = useState(false)
   const passed = verification?.overall_status === 'passed'
 
   return (
-    <div className={`card border animate-slide-up ${passed ? 'border-shield-500/20' : 'border-red-500/20'}`}
-      style={{ animationDelay: `${index * 80}ms` }}>
+    <div
+      className="rounded-2xl overflow-hidden transition-all duration-300 animate-slide-up"
+      style={{
+        background: passed ? 'rgba(22,163,74,0.05)' : 'rgba(239,68,68,0.05)',
+        border: passed ? '1px solid rgba(22,163,74,0.2)' : '1px solid rgba(239,68,68,0.2)',
+        animationDelay: `${index * 80}ms`,
+      }}
+    >
+      {/* Header */}
       <div
-        className="flex items-start justify-between cursor-pointer gap-3"
+        className="flex items-start justify-between p-4 cursor-pointer gap-3"
         onClick={() => setOpen(o => !o)}
       >
         <div className="flex items-start gap-3 min-w-0">
-          <span className="text-xl mt-0.5">{passed ? '🩹' : '❌'}</span>
+          <span className="text-xl shrink-0 mt-0.5">{passed ? '🩹' : '❌'}</span>
           <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap mb-1">
               <span className="font-bold text-sm text-dark-100">{vuln?.vuln_type || 'Patch'}</span>
@@ -84,23 +104,28 @@ function PatchCard({ patch, verification, vuln, index }) {
                 : <span className="badge-fail">✗ Failed</span>
               }
             </div>
-            <p className="text-dark-400 text-xs truncate">{patch.explanation}</p>
+            <p className="text-dark-500 text-xs leading-relaxed line-clamp-1">{patch.explanation}</p>
           </div>
         </div>
-        <span className="text-dark-500 text-xs shrink-0">{open ? '▲' : '▼'}</span>
+        <span
+          className="text-dark-600 text-xs shrink-0 transition-transform duration-200"
+          style={{ transform: open ? 'rotate(180deg)' : 'rotate(0deg)' }}
+        >▼</span>
       </div>
 
+      {/* Body */}
       {open && (
-        <div className="mt-4 space-y-4 animate-fade-in">
-          <DiffViewer original={patch.original_code} patched={patch.patched_code} />
-
-          <div>
+        <div
+          className="px-4 pb-4 space-y-4 animate-fade-in border-t"
+          style={{ borderColor: passed ? 'rgba(22,163,74,0.15)' : 'rgba(239,68,68,0.15)' }}
+        >
+          <div className="pt-4">
             <div className="section-label">Explanation</div>
             <p className="text-sm text-dark-200 leading-relaxed">{patch.explanation}</p>
           </div>
 
           <div>
-            <div className="section-label">Verification</div>
+            <div className="section-label">Verification Result</div>
             <VerificationMini ver={verification} />
             {verification?.errors?.length > 0 && (
               <div className="mt-2 code-block text-xs text-red-300 max-h-24 overflow-y-auto">
@@ -109,10 +134,23 @@ function PatchCard({ patch, verification, vuln, index }) {
             )}
           </div>
 
+          <div>
+            <div className="section-label">Code Change</div>
+            <DiffViewer original={patch.original_code} patched={patch.patched_code} />
+          </div>
+
           {patch.diff && (
-            <details className="text-xs">
-              <summary className="text-dark-500 cursor-pointer hover:text-dark-300">Show unified diff</summary>
-              <pre className="code-block mt-2 max-h-40 overflow-y-auto text-dark-300">{patch.diff}</pre>
+            <details className="text-xs" onToggle={e => setShowDiff(e.target.open)}>
+              <summary className="text-dark-600 cursor-pointer hover:text-dark-300 transition-colors select-none">
+                {showDiff ? '▲' : '▼'} Unified diff
+              </summary>
+              <div className="code-block mt-2 max-h-36 overflow-y-auto">
+                {patch.diff.split('\n').map((line, i) => {
+                  if (line.startsWith('+') && !line.startsWith('+++')) return <span key={i} className="diff-add">{line}</span>
+                  if (line.startsWith('-') && !line.startsWith('---')) return <span key={i} className="diff-del">{line}</span>
+                  return <span key={i} className="diff-ctx">{line}</span>
+                })}
+              </div>
             </details>
           )}
         </div>
@@ -128,12 +166,24 @@ export default function RepairPage() {
   const vulns = state.vulnerabilities || []
   const verifications = state.verifications || []
 
+  const passCount = verifications.filter(v => v.overall_status === 'passed').length
+  const templateCount = patches.filter(p => p.strategy === 'template').length
+
   return (
-    <div className="max-w-5xl mx-auto px-4 py-8 animate-fade-in">
+    <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8 animate-fade-in">
+      {/* Header */}
       <div className="flex items-start justify-between mb-8 flex-wrap gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-dark-100 mb-1">🔧 M2 — Repair Patches</h1>
-          <p className="text-dark-400 text-sm">Template-based + LLM-generated fixes</p>
+          <div className="flex items-center gap-3 mb-1">
+            <div
+              className="w-9 h-9 rounded-xl flex items-center justify-center text-lg"
+              style={{ background: 'rgba(22,163,74,0.12)', border: '1px solid rgba(22,163,74,0.2)' }}
+            >
+              🔧
+            </div>
+            <h1 className="text-2xl font-bold text-dark-100">M2 — Repair Patches</h1>
+          </div>
+          <p className="text-dark-500 text-sm ml-12">Template engine · LLM-guided repair · Escalation loop</p>
         </div>
         <div className="flex gap-2">
           <button className="btn-secondary" onClick={() => navigate('/analyze')}>← Analysis</button>
@@ -144,32 +194,37 @@ export default function RepairPage() {
       </div>
 
       {patches.length === 0 ? (
-        <div className="card text-center py-16">
-          <div className="text-4xl mb-4">🩹</div>
-          <p className="text-dark-300 mb-4">No patches generated yet. Run the full pipeline first.</p>
+        <div className="card text-center py-20">
+          <div className="text-5xl mb-4 animate-float">🩹</div>
+          <p className="text-dark-400 text-lg mb-2">No patches generated yet.</p>
+          <p className="text-dark-600 text-sm mb-6">Run the full pipeline from the Analysis page.</p>
           <button className="btn-primary" onClick={() => navigate('/analyze')}>← Go to Analysis</button>
         </div>
       ) : (
         <>
+          {/* Stats */}
           <div className="grid grid-cols-3 gap-3 mb-8">
-            <div className="card text-center">
-              <div className="text-3xl font-bold text-dark-50">{patches.length}</div>
-              <div className="text-xs text-dark-400 mt-1">Total Patches</div>
+            <div className="metric-card">
+              <div className="text-4xl font-black text-dark-100 mb-1 counter">{patches.length}</div>
+              <div className="text-xs text-dark-500 font-semibold uppercase tracking-wider">Total Patches</div>
             </div>
-            <div className="card text-center">
-              <div className="text-3xl font-bold text-shield-300">
-                {verifications.filter(v => v.overall_status === 'passed').length}
-              </div>
-              <div className="text-xs text-dark-400 mt-1">Verified</div>
+            <div
+              className="metric-card"
+              style={{ background: 'rgba(22,163,74,0.06)', border: '1px solid rgba(22,163,74,0.15)' }}
+            >
+              <div className="text-4xl font-black text-shield-300 mb-1 counter">{passCount}</div>
+              <div className="text-xs text-dark-500 font-semibold uppercase tracking-wider">Verified ✓</div>
             </div>
-            <div className="card text-center">
-              <div className="text-3xl font-bold text-cyber-300">
-                {patches.filter(p => p.strategy === 'template').length}
-              </div>
-              <div className="text-xs text-dark-400 mt-1">Template Fixes</div>
+            <div
+              className="metric-card"
+              style={{ background: 'rgba(14,165,233,0.06)', border: '1px solid rgba(14,165,233,0.15)' }}
+            >
+              <div className="text-4xl font-black text-cyber-300 mb-1 counter">{templateCount}</div>
+              <div className="text-xs text-dark-500 font-semibold uppercase tracking-wider">Template Fixes</div>
             </div>
           </div>
 
+          {/* Patch cards */}
           <div className="space-y-3">
             {patches.map((p, i) => (
               <PatchCard

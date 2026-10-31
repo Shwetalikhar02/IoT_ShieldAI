@@ -26,8 +26,10 @@ from app.core.logger import get_logger
 log = get_logger(__name__)
 router = APIRouter(prefix="/demo", tags=["Demo"])
 
-# Path to demo firmware directory
-DEMO_DIR = Path("datasets/demo_firmware")
+# Path to demo firmware directory — resolve relative to project root
+# __file__ is backend/app/api/routes/demo.py → go up 4 levels to project root
+_PROJECT_ROOT = Path(__file__).resolve().parents[4]
+DEMO_DIR = _PROJECT_ROOT / "datasets" / "demo_firmware"
 
 # Canonical sample definitions (embedded so the endpoint always works)
 DEMO_SAMPLES = [

@@ -51,7 +51,9 @@ log = get_logger(__name__)
 
 MAX_INITIAL_ATTEMPTS = 3
 MAX_TOTAL_REFINEMENTS = 5
-SESSIONS_DIR = Path("reports") / "sessions"
+# Resolve from this file's location: pipeline/repair_loop.py → project root → backend/reports/sessions
+_PROJECT_ROOT = Path(__file__).resolve().parents[3]
+SESSIONS_DIR = _PROJECT_ROOT / "backend" / "reports" / "sessions"
 
 
 def _ensure_sessions_dir() -> Path:

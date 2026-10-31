@@ -12,8 +12,14 @@ Security:
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+# Project root = parent of this file's parent's parent's parent
+# backend/app/core/config.py → parents[3] = project root
+_PROJECT_ROOT = Path(__file__).resolve().parents[3]
 
 
 class Settings(BaseSettings):
@@ -91,8 +97,8 @@ class Settings(BaseSettings):
     # ── File Upload ──────────────────────────────────────────────────────────
     upload_max_size_mb: int = Field(default=10)
     upload_allowed_extensions: str = Field(default="c,cpp,h,hpp")
-    upload_dir: str = Field(default="uploads")
-    reports_dir: str = Field(default="reports")
+    upload_dir: str = Field(default=str(_PROJECT_ROOT / "backend" / "uploads"))
+    reports_dir: str = Field(default=str(_PROJECT_ROOT / "backend" / "reports"))
 
     # ── CORS ─────────────────────────────────────────────────────────────────
     cors_origins: str = Field(

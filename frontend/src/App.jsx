@@ -1,8 +1,5 @@
 /**
- * App.jsx — Root Application with Layout
- *
- * Provides the PipelineProvider state wrapper and a persistent sidebar
- * with the pipeline step indicator.
+ * App.jsx — Root Application with Premium Layout
  */
 
 import React from 'react'
@@ -15,12 +12,16 @@ import RepairPage       from './pages/RepairPage'
 import VerificationPage from './pages/VerificationPage'
 import ReportPage       from './pages/ReportPage'
 import Navbar           from './components/Navbar'
+import Toast            from './components/Toast'
 
 export default function App() {
   return (
     <PipelineProvider>
       <BrowserRouter>
-        <div className="min-h-screen flex flex-col">
+        {/* Animated background grid */}
+        <div className="bg-grid" aria-hidden="true" />
+        
+        <div className="min-h-screen flex flex-col relative z-10">
           <Navbar />
           <main className="flex-1">
             <Routes>
@@ -33,6 +34,9 @@ export default function App() {
             </Routes>
           </main>
         </div>
+        
+        {/* Global toast notifications */}
+        <Toast />
       </BrowserRouter>
     </PipelineProvider>
   )
