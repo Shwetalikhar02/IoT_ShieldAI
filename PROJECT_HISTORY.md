@@ -25,10 +25,10 @@
 
 | Module | Scope / Component | Status | Lead / Assignee |
 |---|---|---|---|
-| **M1: Analysis** | Static analyzer, code parser, root cause, severity, DL classifier stubs | Scaffolded (Not Started) | Member 1 |
-| **M2: Repair** | Template engine, fix templates, prompt builder, LLM client, patch applier | Scaffolded (Not Started) | Member 2 |
-| **M3: Verification** | Sandbox runner, compiler, sanitizer runner, no-cheating check, feedback loop | Scaffolded (Not Started) | Member 3 |
-| **M4: Explainability** | Patch explainer, resource metrics (Flash/RAM delta), report builder | Scaffolded (Not Started) | Member 4 |
+| **M1: Analysis** | Static analyzer, code parser, localizer, severity, DL classifier | In Progress | Member 1 |
+| **M2: Repair** | Template engine, fix templates, pluggable/mock LLM client, repair loop | In Progress | Member 2 |
+| **M3: Verification** | Sandbox runner, compiler, sanitizer runner, real no-cheating check, feedback loop | In Progress | Member 3 |
+| **M4: Explainability** | Grounded patch explainer, resource metrics (Flash/RAM delta), report builder | In Progress | Member 4 |
 | **Frontend** | React + Vite UI, router, pages (Upload, Analyze, Repair, Verify, Report), diff viewer | Scaffolded (In Progress) | Member 4 |
 | **Sandbox** | Dockerfile, container runner script, build config | Scaffolded (Not Started) | Member 3 |
 
@@ -71,6 +71,18 @@
   - Initialized git repository, added files, and committed initial scaffold.
 - **Final Verdict**: APPROVED (Fixed then Approved)
 
+### Plan Review: Task #2 — Connected 5-Feature Pipeline (F-A through F-E)
+- **Task**: Implement unified localization, repair loop with escalation, hybrid DL + template repair with pluggable/mock LLM client, explainable patches, real AST no-cheating checks, and conversation-driven refinement.
+- **Issues Found in Initial Plan**:
+  - Needed to ensure no API keys or secrets are logged or exposed.
+  - Needed to eliminate duplicate retry logic in `m3_verification/feedback_loop.py` and delegate solely to `pipeline/repair_loop.py`.
+  - Required deterministic offline mock mode (`LLM_MOCK=True`) for reliable CI and demo evaluation.
+- **Fixes Applied**:
+  - Made `LLM_API_KEY` hidden from repr and documentation.
+  - Defined `Feedback` schema in `repair_session.py` and refactored `feedback_loop.py` to act as pure transformer.
+  - Added canned mock responses for all 5 demo firmware CWEs in `llm_client.py`.
+- **Final Verdict**: APPROVED
+
 ---
 
 ## 6. Prompt Log
@@ -78,3 +90,4 @@
 | # | Date/Time | Prompt Summary | Plan Review (Approved / Fixed then Approved) | What It Did | Files Created/Changed | Status | Errors Found and Fixed |
 |---|---|---|---|---|---|---|---|
 | 1 | 2026-10-31 17:30 UTC | Base repository scaffolding for IoT ShieldAI (Architecture, Pydantic v2 schemas, FastAPI GET /health, React+Vite frontend, 5 demo firmware samples, Docker sandbox, scripts, skills system, and project history) | Fixed then Approved | Scaffolding completion: Created missing docs (architecture, problem_mapping, api_contract), README.md, SKILLS.md registry, review-implementation-plan skill, PROJECT_HISTORY.md, initialized Git repository and created initial commit, ran verification suite. | `PROJECT_HISTORY.md`, `SKILLS.md`, `README.md`, `docs/architecture.md`, `docs/problem_mapping.md`, `docs/api_contract.md`, `.agent/skills/review-implementation-plan/SKILL.md`, `.git/` | Done | Missing docs and 5th starter skill detected during plan review; created all missing files and initialized git repository. |
+| 2 | 2026-10-31 18:00 UTC | Connected 5-Feature Pipeline: F-A Unified Localization & Repair Loop, F-B Hybrid DL/Template Repair (Pluggable/Mock LLM), F-C Explainable Patches, F-D Real No-Cheating Check, F-E Conversation-Driven Repair | Approved | Implemented `localizer.py`, `repair_session.py`, `repair_loop.py`, `no_cheating_check.py`, `explainer.py`, `llm_client.py` (mock + adapters), `dl_classifier.py`, `template_engine.py`, updated repair routes & orchestrator, added unit tests, tracker rules, and project tracker. | `localizer.py`, `repair_session.py`, `repair_loop.py`, `no_cheating_check.py`, `explainer.py`, `llm_client.py`, `dl_classifier.py`, `template_engine.py`, `feedback_loop.py`, `orchestrator.py`, `repair.py`, `config.py`, `.env.example`, `PROJECT_TRACKER.md`, `tracker-rules.md`, `test_repair_loop.py` | Done | Refactored feedback_loop.py to remove duplicate retry logic; ensured zero API key leakage in logs. |

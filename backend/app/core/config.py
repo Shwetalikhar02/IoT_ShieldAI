@@ -45,14 +45,17 @@ class Settings(BaseSettings):
     log_level: str = Field(default="INFO")
 
     # ── LLM Provider ────────────────────────────────────────────────────────
-    llm_provider: str = Field(default="deepseek")
-    llm_api_base_url: str = Field(default="https://api.deepseek.com/v1")
-    llm_api_key: str = Field(default="", repr=False)  # repr=False hides key in logs
-    llm_model: str = Field(default="deepseek-coder-33b-instruct")
+    llm_provider: str = Field(default="mock", description="mock | openai | anthropic | deepseek")
+    llm_api_base_url: str = Field(default="")
+    llm_base_url: str = Field(default="")
+    llm_api_key: str = Field(default="", repr=False)  # repr=False hides key in logs/repr
+    llm_model: str = Field(default="gpt-4o-mini")
     llm_max_tokens: int = Field(default=2048)
     llm_temperature: float = Field(default=0.2)
-    llm_timeout_seconds: int = Field(default=120)
+    llm_timeout_seconds: int = Field(default=60)
     llm_max_retries: int = Field(default=3)
+    llm_mock: bool = Field(default=True, description="When true, use deterministic canned responses for offline testing")
+    classifier_confidence_threshold: float = Field(default=0.75, description="Confidence threshold for automatic template routing")
 
     # ── Sandbox / Compiler ───────────────────────────────────────────────────
     sandbox_docker_image: str = Field(default="iot-shieldai-sandbox:latest")

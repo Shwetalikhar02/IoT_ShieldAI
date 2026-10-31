@@ -1,46 +1,67 @@
 """
-modules/m3_verification/feedback_loop.py — Verification Feedback Loop
-=======================================================================
+modules/m3_verification/feedback_loop.py — Verification Feedback Transformer
+=============================================================================
 Responsibility:
-    Implement the retry logic between M3 and M2:  when a patch fails
-    verification, extract the relevant error messages, format them into
-    feedback for M2's prompt builder, and trigger a new patch attempt.
-    Enforces the maximum of 3 attempts.
+    Transform a VerificationResult (compiler warnings, AddressSanitizer logs,
+    and anti-cheating check violations) into a structured Feedback object
+    to guide subsequent repair attempts.
 
 Inputs:
-    verification_result: VerificationResult  — failed result from M3
-    vulnerability: Vulnerability             — original vulnerability
-    attempt_number: int                      — current attempt (1–3)
+    result: VerificationResult  — Output from compiler, ASan, and no-cheating checks
 
 Outputs:
-    str | None  — formatted feedback string for prompt_builder.py,
-                  or None if max retries reached
-
-TODO:
-    - Implement extract_feedback(verification_result) to format errors
-      into a concise string the LLM can act on.
-    - Implement should_retry(attempt_number) → bool.
-    - Call this from orchestrator.py after each failed verification.
-    - Log each retry attempt with attempt number and error summary.
+    Feedback                    — Actionable diagnostic report for M2 repair
 """
 
 from __future__ import annotations
 
-from app.core.logger import get_logger
+from app.schemas.repair_session import Feedback
 from app.schemas.verification import VerificationResult
 
-log = get_logger(__name__)
 
-MAX_ATTEMPTS = 3
+def create_feedback_from_result(
+    result: VerificationResult,
+    vulnerability_desc: str | None = None,
+) -> Feedback:
+    """Convert VerificationResult into a structured Feedback instance."""
+    failed_checks: list[str] = []
+    if not result.compiles:
+        failed_checks.append("compilation")
+    if not result.sanitizer_passed:
+        failed_checks.append("sanitizer")
+    if not result.no_cheating_passed:
+        failed_checks.append("no_cheating")
 
+    compiler_errors: list[str] = []
+    sanitizer_report: str | None = None
+    no_cheat_violations: list[str] = []
 
-def extract_feedback(result: VerificationResult) -> str:
-    """
-    TODO: Format verification errors into actionable LLM feedback.
-    """
-    return "\n".join(result.errors)
+    for err in result.errors:
+        err_lower = err.lower()
+        if "error:" in err_lower or "warning:" in err_lower:
+            compiler_errors.append(err)
+        elif "addresssanitizer" in err_lower or "sanitizer" in err_lower:
+            sanitizer_report = (sanitizer_report or "") + "\n" + err
+        elif "cheat" in err_lower or "deleted" in err_lower or "bypass" in err_lower:
+            no_cheat_violations.append(err)
+        else:
+            compiler_errors.append(err)
 
+    # Synthesize an actionable hint
+    hints: list[str] = []
+    if not result.compiles:
+        hints.append("Fix C syntax/compilation errors without altering function signatures.")
+    if not result.sanitizer_passed:
+        hints.append("Ensure buffer boundaries and pointers are checked before dereferencing or writing.")
+    if not result.no_cheating_passed:
+        hints.append("Do not delete the vulnerable logic or insert dummy early returns; implement the safe replacement.")
 
-def should_retry(attempt_number: int) -> bool:
-    """Return True if we have retries remaining."""
-    return attempt_number < MAX_ATTEMPTS
+    hint_str = " ".join(hints) if hints else "Review patch against IoT firmware safety constraints."
+
+    return Feedback(
+        failed_checks=failed_checks,
+        compiler_errors=compiler_errors,
+        sanitizer_report=sanitizer_report.strip() if sanitizer_report else None,
+        no_cheat_violations=no_cheat_violations,
+        hint_for_next_attempt=hint_str,
+    )
