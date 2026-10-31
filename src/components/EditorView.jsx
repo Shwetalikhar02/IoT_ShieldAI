@@ -1,6 +1,6 @@
-import React, { useRef, useEffect, useState } from 'react'
+import React, { useRef, useEffect } from 'react'
 import Editor, { DiffEditor } from '@monaco-editor/react'
-import { Wand2, Check, X, GitCompare, Code2, AlertTriangle, Eye, RefreshCw } from 'lucide-react'
+import { Wand2, Check, X, GitCompare, Code2, AlertTriangle, Cpu } from 'lucide-react'
 
 export default function EditorView({
   code,
@@ -18,23 +18,47 @@ export default function EditorView({
   const editorRef = useRef(null)
   const monacoRef = useRef(null)
 
-  // Configure Monaco options and markers
   const handleEditorDidMount = (editor, monaco) => {
     editorRef.current = editor
     monacoRef.current = monaco
 
-    // Set markers for vulnerabilities
+    // Define refined custom dark theme matching #101310
+    monaco.editor.defineTheme('codeshield-dark', {
+      base: 'vs-dark',
+      inherit: true,
+      rules: [
+        { token: 'comment', foreground: '626D64', fontStyle: 'italic' },
+        { token: 'keyword', foreground: 'B7E36A' },
+        { token: 'string', foreground: 'A3D685' },
+        { token: 'number', foreground: 'E5A854' },
+        { token: 'type', foreground: '78B3E0' },
+        { token: 'function', foreground: 'F3F5EF', fontStyle: 'bold' },
+        { token: 'identifier', foreground: 'F3F5EF' },
+      ],
+      colors: {
+        'editor.background': '#101310',
+        'editor.foreground': '#F3F5EF',
+        'editorLineNumber.foreground': '#364039',
+        'editorLineNumber.activeForeground': '#9AA39B',
+        'editor.lineHighlightBackground': '#181D19',
+        'editor.selectionBackground': '#2A362D',
+        'editorCursor.foreground': '#B7E36A',
+        'editorGutter.background': '#101310',
+        'editorIndentGuide.background': '#1D231E',
+        'editorIndentGuide.activeBackground': '#2B332D',
+      }
+    })
+    monaco.editor.setTheme('codeshield-dark')
+
     updateMonacoMarkers(editor, monaco, vulnerabilities)
   }
 
-  // Update markers whenever vulnerabilities change
   useEffect(() => {
     if (editorRef.current && monacoRef.current) {
       updateMonacoMarkers(editorRef.current, monacoRef.current, vulnerabilities)
     }
   }, [vulnerabilities])
 
-  // Scroll to active vulnerability line
   useEffect(() => {
     if (editorRef.current && activeVuln) {
       editorRef.current.revealLineInCenter(activeVuln.line_start)
@@ -52,74 +76,62 @@ export default function EditorView({
       startColumn: 1,
       endLineNumber: v.line_end,
       endColumn: 100,
-      message: `[${v.cwe_id}] ${v.vuln_type}\nRoot Cause: ${v.root_cause}\nFix: ${v.fix_advice}`,
+      message: `[${v.cwe_id}] ${v.vuln_type}\nRoot Cause: ${v.root_cause}\nRecommended Remediation: ${v.fix_advice}`,
       severity: monaco.MarkerSeverity.Error,
     }))
 
-    monaco.editor.setModelMarkers(model, 'shieldai-analyzer', markers)
+    monaco.editor.setModelMarkers(model, 'codeshield-analyzer', markers)
   }
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-[#0a0f1d] overflow-hidden relative">
-      {/* Editor Sub-Header / Breadcrumb */}
-      <div className="h-10 border-b border-white/10 bg-[#020617]/80 px-4 flex items-center justify-between text-xs select-none">
+    <div className="flex-1 flex flex-col h-full bg-[#101310] overflow-hidden relative">
+      {/* Editor Sub-Header */}
+      <div className="h-10 border-b border-[#2B332D] bg-[#181D19] px-4 flex items-center justify-between text-xs select-none">
         <div className="flex items-center gap-2">
-          <Code2 className="w-4 h-4 text-emerald-400" />
-          <span className="font-mono text-slate-300 font-semibold">{activeFile?.name || 'firmware.c'}</span>
-          <span className="text-slate-600 font-mono">|</span>
-          <span className="text-[11px] text-slate-400 font-mono">C99 / IoT MCU Target</span>
+          <Code2 className="w-3.5 h-3.5 text-[#B7E36A]" />
+          <span className="font-mono text-[#F3F5EF] font-medium">{activeFile?.name || 'firmware.c'}</span>
+          <span className="text-[#626D64] font-mono">·</span>
+          <span className="text-[11px] text-[#9AA39B] font-mono">C99 / Bare-metal Target</span>
         </div>
 
         <div className="flex items-center gap-2">
           {candidatePatch && (
             <button
               onClick={onToggleDiffMode}
-              className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-xs transition-colors ${
-                isDiffMode
-                  ? 'bg-sky-500/20 text-sky-300 border border-sky-500/30'
-                  : 'bg-slate-800 text-slate-400 hover:text-slate-200'
+              className={`btn-quiet text-xs !py-1 !px-2.5 ${
+                isDiffMode ? '!border-[#B7E36A] !text-[#B7E36A]' : ''
               }`}
-              title="Toggle Side-by-Side Diff Comparison"
             >
               <GitCompare className="w-3.5 h-3.5" />
-              <span>{isDiffMode ? 'Exit Diff View' : 'Compare Patch Diff'}</span>
+              <span>{isDiffMode ? 'Buffer Editor' : 'Side-by-Side Diff'}</span>
             </button>
           )}
 
           {vulnerabilities.length > 0 && !candidatePatch && (
             <button
               onClick={() => onTriggerQuickFix(vulnerabilities[0])}
-              className="btn-primary !py-1 !px-2.5 text-xs flex items-center gap-1.5 shadow-sm"
+              className="btn-lime text-xs !py-1 !px-2.5 font-medium"
             >
               <Wand2 className="w-3.5 h-3.5" />
-              <span>Fix with AI ({vulnerabilities.length})</span>
+              <span>AI Fix ({vulnerabilities.length})</span>
             </button>
           )}
         </div>
       </div>
 
-      {/* Inline AI Candidate Patch Banner */}
+      {/* Candidate Patch Review Banner */}
       {candidatePatch && (
-        <div className="p-3 bg-gradient-to-r from-emerald-950/60 via-slate-900/80 to-emerald-950/40 border-b border-emerald-500/30 flex items-center justify-between text-xs animate-slide-up z-20">
+        <div className="px-4 py-2.5 bg-[#181D19] border-b border-[#2B332D] flex items-center justify-between text-xs animate-slide-up z-20">
           <div className="flex items-center gap-3">
-            <div className="w-7 h-7 rounded-lg bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
-              <Wand2 className="w-4 h-4" />
-            </div>
+            <span className="w-2 h-2 rounded-full bg-[#B7E36A]" />
             <div>
-              <div className="flex items-center gap-2 mb-0.5">
-                <span className="font-bold text-white">Candidate Remediation Synthesized</span>
-                <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                  candidatePatch.strategy === 'template'
-                    ? 'bg-sky-500/20 text-sky-300 border border-sky-500/30'
-                    : 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
-                }`}>
-                  {candidatePatch.strategy === 'template' ? '📋 Deterministic Template' : '🤖 DeepSeek-Coder LLM'}
-                </span>
-                <span className="text-[10px] text-slate-400 font-mono">
-                  Attempt #{candidatePatch.attempt_number || 1}
+              <div className="flex items-center gap-2">
+                <span className="font-semibold text-[#F3F5EF]">Synthesized Patch Candidate</span>
+                <span className="text-[10px] font-mono text-[#9AA39B] px-1.5 py-0.5 rounded bg-[#1D231E] border border-[#2B332D]">
+                  {candidatePatch.strategy === 'template' ? 'Deterministic Rule' : 'DeepSeek-Coder LLM'}
                 </span>
               </div>
-              <p className="text-slate-300 text-[11px] max-w-2xl truncate">
+              <p className="text-[#9AA39B] text-[11px] line-clamp-1 mt-0.5">
                 {candidatePatch.explanation}
               </p>
             </div>
@@ -128,28 +140,28 @@ export default function EditorView({
           <div className="flex items-center gap-2">
             <button
               onClick={onAcceptPatch}
-              className="btn-primary !py-1.5 !px-3 text-xs flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold"
+              className="btn-lime text-xs !py-1.5 !px-3 font-semibold"
             >
               <Check className="w-3.5 h-3.5" />
-              <span>Accept & Verify</span>
+              <span>Apply Fix</span>
             </button>
             <button
               onClick={onRejectPatch}
-              className="btn-secondary !py-1.5 !px-2.5 text-xs text-red-300 hover:text-red-200 border-red-500/30 hover:border-red-500/50 flex items-center gap-1.5"
+              className="btn-quiet text-xs !py-1.5 !px-2.5 text-[#F07878] hover:text-[#F07878]"
             >
               <X className="w-3.5 h-3.5" />
-              <span>Reject</span>
+              <span>Dismiss</span>
             </button>
           </div>
         </div>
       )}
 
-      {/* Editor Content Area */}
+      {/* Editor Surface */}
       <div className="flex-1 w-full relative">
         {isDiffMode && candidatePatch ? (
           <DiffEditor
             height="100%"
-            theme="vs-dark"
+            theme="codeshield-dark"
             language="c"
             original={code}
             modified={candidatePatch.full_patched_code || code}
@@ -158,7 +170,7 @@ export default function EditorView({
               renderSideBySide: true,
               minimap: { enabled: false },
               fontSize: 13,
-              fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
+              fontFamily: "'JetBrains Mono', monospace",
               scrollBeyondLastLine: false,
               automaticLayout: true,
             }}
@@ -166,7 +178,7 @@ export default function EditorView({
         ) : (
           <Editor
             height="100%"
-            theme="vs-dark"
+            theme="codeshield-dark"
             language="c"
             value={code}
             onChange={onChangeCode}
@@ -174,7 +186,7 @@ export default function EditorView({
             options={{
               minimap: { enabled: true, scale: 0.75 },
               fontSize: 13,
-              fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
+              fontFamily: "'JetBrains Mono', monospace",
               scrollBeyondLastLine: false,
               lineNumbers: 'on',
               glyphMargin: true,

@@ -1,10 +1,10 @@
 import React, { useState } from 'react'
-import { X, AlertTriangle, ShieldAlert, CheckCircle2, XCircle, ArrowRight, Play, Eye } from 'lucide-react'
+import { X, ShieldAlert, CheckCircle2, XCircle, Play } from 'lucide-react'
 import { CHEATING_PATCH_EXAMPLE } from '../data/firmwareSamples'
 import { checkNoCheating } from '../services/verifier'
 
 export default function CheatingDemoModal({ isOpen, onClose }) {
-  const [cheatType, setCheatType] = useState('early_return') // 'early_return' | 'deletion'
+  const [cheatType, setCheatType] = useState('early_return')
   const [checkResult, setCheckResult] = useState(null)
 
   if (!isOpen) return null
@@ -21,110 +21,109 @@ export default function CheatingDemoModal({ isOpen, onClose }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in select-none">
-      <div className="bg-[#0f172a] border border-white/10 rounded-2xl w-full max-w-3xl flex flex-col shadow-2xl overflow-hidden">
+      <div className="bg-[#181D19] border border-[#2B332D] rounded-xl w-full max-w-2xl flex flex-col shadow-2xl overflow-hidden text-xs">
         {/* Header */}
-        <div className="p-4 border-b border-white/10 flex items-center justify-between bg-amber-950/30">
+        <div className="p-4 border-b border-[#2B332D] flex items-center justify-between bg-[#101310]">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-400">
+            <div className="w-7 h-7 rounded-md bg-[#181D19] border border-[#2B332D] flex items-center justify-center text-[#E5A854]">
               <ShieldAlert className="w-4 h-4" />
             </div>
             <div>
-              <h2 className="text-base font-bold text-white">M3 Anti-Cheating Bypass Demonstration</h2>
-              <p className="text-xs text-amber-300 font-mono">Catching Adversarial & Lazy LLM Sanitizer Evasions</p>
+              <h2 className="text-sm font-bold text-[#F3F5EF]">Anti-Cheating Bypass Demonstration</h2>
+              <p className="text-[11px] text-[#9AA39B] font-mono">Catching Adversarial & Lazy LLM Sanitizer Evasions</p>
             </div>
           </div>
 
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+            className="p-1 rounded text-[#9AA39B] hover:text-[#F3F5EF] transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Body */}
-        <div className="p-6 space-y-5 text-xs">
-          <p className="text-slate-300 leading-relaxed">
-            Standard sanitizers (ASan/UBSan) can be easily fooled by naive code LLMs that simply delete the vulnerable statement or insert early returns to bypass test executions.
-            CodeShield AI incorporates <strong>No-Cheating Syntactic & Semantic AST Verification</strong> to guarantee genuine functional remediation.
+        <div className="p-6 space-y-4">
+          <p className="text-[#9AA39B] leading-relaxed">
+            Standard compiler sanitizers can be fooled by naive code LLMs that simply delete the vulnerable statement or insert premature returns. CodeShield AI enforces <strong>No-Cheating Syntactic & Semantic AST Verification</strong> to guarantee genuine functional remediation.
           </p>
 
           {/* Selector */}
-          <div className="flex items-center gap-3 bg-slate-900/80 p-1.5 rounded-xl border border-white/5">
+          <div className="flex items-center gap-2 bg-[#101310] p-1 rounded-md border border-[#2B332D]">
             <button
               onClick={() => { setCheatType('early_return'); setCheckResult(null); }}
-              className={`flex-1 py-1.5 px-3 rounded-lg font-semibold text-xs transition-colors ${
+              className={`flex-1 py-1.5 px-3 rounded text-xs font-medium transition-colors ${
                 cheatType === 'early_return'
-                  ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
-                  : 'text-slate-400 hover:text-white'
+                  ? 'bg-[#181D19] text-[#E5A854] border border-[#2B332D]'
+                  : 'text-[#9AA39B] hover:text-[#F3F5EF]'
               }`}
             >
-              1. Premature Return Bypass Cheat
+              1. Premature Return Bypass
             </button>
             <button
               onClick={() => { setCheatType('deletion'); setCheckResult(null); }}
-              className={`flex-1 py-1.5 px-3 rounded-lg font-semibold text-xs transition-colors ${
+              className={`flex-1 py-1.5 px-3 rounded text-xs font-medium transition-colors ${
                 cheatType === 'deletion'
-                  ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
-                  : 'text-slate-400 hover:text-white'
+                  ? 'bg-[#181D19] text-[#E5A854] border border-[#2B332D]'
+                  : 'text-[#9AA39B] hover:text-[#F3F5EF]'
               }`}
             >
-              2. Sensitive Call Deletion Cheat
+              2. Sensitive Call Deletion
             </button>
           </div>
 
           {/* Comparison */}
           <div className="grid grid-cols-2 gap-3 font-mono text-[11px]">
-            <div>
-              <div className="text-slate-400 font-bold mb-1 uppercase text-[10px]">Original Vulnerable Code</div>
-              <pre className="p-3 rounded-xl bg-black/60 border border-white/5 text-red-200 overflow-x-auto whitespace-pre">
+            <div className="space-y-1">
+              <div className="text-[#9AA39B] font-medium uppercase text-[10px]">Original Vulnerable Code</div>
+              <pre className="p-3 rounded bg-[#101310] border border-[#2B332D] text-[#F07878] overflow-x-auto whitespace-pre">
                 {originalSnippet}
               </pre>
             </div>
 
-            <div>
-              <div className="text-amber-400 font-bold mb-1 uppercase text-[10px]">
+            <div className="space-y-1">
+              <div className="text-[#E5A854] font-medium uppercase text-[10px]">
                 {cheatType === 'early_return' ? 'Adversarial Bypass Patch' : 'Lazy Truncation Patch'}
               </div>
-              <pre className="p-3 rounded-xl bg-black/60 border border-amber-500/30 text-amber-200 overflow-x-auto whitespace-pre">
+              <pre className="p-3 rounded bg-[#101310] border border-[#E5A854]/40 text-[#E5A854] overflow-x-auto whitespace-pre">
                 {cheatSnippet}
               </pre>
             </div>
           </div>
 
-          {/* Run Verification Button */}
+          {/* Action */}
           <div className="flex items-center justify-between pt-2">
-            <div className="text-slate-400 text-[11px]">
-              Expected: <span className="text-amber-300 font-bold">REJECTED with violation details</span>
-            </div>
+            <span className="text-[#9AA39B] font-mono text-[11px]">
+              Expected outcome: <strong className="text-[#F07878]">REJECTED with violation details</strong>
+            </span>
             <button
               onClick={handleRunNoCheatCheck}
-              className="btn-primary !py-2 !px-4 text-xs flex items-center gap-2 bg-gradient-to-r from-amber-600 to-amber-500 text-white font-bold"
+              className="btn-lime text-xs font-semibold py-1.5 px-3 flex items-center gap-1.5"
             >
               <Play className="w-3.5 h-3.5 fill-current" />
-              <span>Verify with M3 No-Cheating Gate</span>
+              <span>Verify with Anti-Cheating Gate</span>
             </button>
           </div>
 
           {/* Results Display */}
           {checkResult && (
-            <div className="p-4 rounded-xl bg-red-950/40 border border-red-500/40 space-y-2 animate-slide-up text-xs">
+            <div className="p-3.5 rounded-lg bg-[#101310] border border-[#F07878]/30 space-y-2 animate-slide-up">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-red-300 font-bold text-sm">
-                  <XCircle className="w-5 h-5 text-red-400" />
+                <div className="flex items-center gap-2 text-[#F07878] font-semibold text-xs">
+                  <XCircle className="w-4 h-4 text-[#F07878]" />
                   <span>CHEATING ATTEMPT DETECTED & INTERCEPTED</span>
                 </div>
-                <span className="badge-fail">REJECTED</span>
+                <span className="badge-critical-subtle">REJECTED</span>
               </div>
 
-              <div className="space-y-1.5 pl-7 mt-2">
+              <div className="space-y-1 pl-6">
                 {checkResult.violations.map((violation, idx) => (
-                  <div key={idx} className="p-2 rounded bg-black/40 border border-red-500/20 text-red-200 font-mono text-[11px]">
+                  <div key={idx} className="p-2 rounded bg-[#181D19] border border-[#2B332D] text-[#F07878] font-mono text-[10px]">
                     ⛔ {violation}
                   </div>
                 ))}
               </div>
-              <p className="text-slate-400 text-[11px] pl-7 pt-1">
+              <p className="text-[#9AA39B] text-[10px] pl-6">
                 The patch is blocked from compiler emission and fed back to the M2 repair loop for automatic regeneration.
               </p>
             </div>
