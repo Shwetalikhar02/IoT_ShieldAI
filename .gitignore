@@ -1,0 +1,101 @@
+# ── Python ────────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+eggs/
+parts/
+var/
+sdist/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+.installed.cfg
+lib/
+lib64/
+.eggs/
+*.manifest
+*.spec
+MANIFEST
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+.python-version
+
+# Testing & coverage
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+coverage.xml
+*.cover
+.hypothesis/
+
+# Ruff / linting caches
+.ruff_cache/
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# ── Node / Frontend ───────────────────────────────────────────────────────────
+node_modules/
+dist/
+.cache/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.npm
+.eslintcache
+
+# Vite
+frontend/dist/
+frontend/.vite/
+
+# ── Build artefacts ───────────────────────────────────────────────────────────
+*.o
+*.a
+*.out
+*.bin
+a.out
+
+# Compiled C demo firmware (keep sources, ignore binaries)
+datasets/demo_firmware/*.out
+datasets/demo_firmware/*.o
+
+# ── Secrets / Environment ─────────────────────────────────────────────────────
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+*.crt
+secrets/
+
+# ── IDE / OS ──────────────────────────────────────────────────────────────────
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── Docker ────────────────────────────────────────────────────────────────────
+sandbox/.docker-stamp
+
+# ── Reports (generated at runtime) ───────────────────────────────────────────
+reports/*.json
+reports/*.html
+reports/*.pdf
+!reports/.gitkeep

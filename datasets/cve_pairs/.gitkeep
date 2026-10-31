@@ -1,0 +1,3 @@
+# CVE-Patch Pairs placeholder
+# Store pairs of (vulnerable_version.c, patched_version.c) sourced from CVE databases
+# for M2 template generation and M1 evaluation.

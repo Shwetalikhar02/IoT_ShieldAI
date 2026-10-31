@@ -1,0 +1,2 @@
+# Generated pipeline reports are saved here at runtime.
+# They are excluded from git tracking (see .gitignore).
