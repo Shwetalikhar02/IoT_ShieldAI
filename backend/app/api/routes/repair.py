@@ -42,9 +42,18 @@ async def repair_vulnerability(req: StartRepairRequest) -> RepairSession:
     """Run the multi-tier repair loop (Template -> Template-Guided LLM -> Free LLM).
     Returns complete RepairSession with attempt history and verification reports.
     """
+    return await _do_repair(req)
+
+
+@router.post("/start", response_model=RepairSession, summary="Initiate repair (alias for POST /repair)")
+async def repair_start(req: StartRepairRequest) -> RepairSession:
+    """Alias entry point matching frontend api.js expectation."""
+    return await _do_repair(req)
+
+
+async def _do_repair(req: StartRepairRequest) -> RepairSession:
     vuln = req.vulnerability
     if not vuln:
-        # Fallback sample vulnerability for testing / demo
         vuln = Vulnerability(
             id=req.vulnerability_id or uuid4(),
             file_path="datasets/demo_firmware/stack_overflow.c",

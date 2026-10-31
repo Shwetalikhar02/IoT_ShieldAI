@@ -2,25 +2,9 @@
 core/logger.py — Structured Logging Setup
 ==========================================
 Responsibility:
-    Configure and expose a structured logger using structlog so that every
-    module can call `get_logger(__name__)` and receive a consistent,
-    JSON-capable logger in production and a pretty-printed logger in
-    development.
-
-Inputs:
-    settings.log_level  — from core/config.py (DEBUG | INFO | WARNING | ERROR)
-    settings.app_env    — "development" enables coloured console output;
-                          "production" emits JSON lines.
-
-Outputs:
-    get_logger(name: str) -> structlog.BoundLogger
-        A bound logger instance pre-tagged with the module name.
-
-TODO:
-    - Add a file sink (RotatingFileHandler) for production deployments.
-    - Integrate OpenTelemetry trace IDs as structlog processors once tracing
-      is enabled.
-    - Allow per-module log-level overrides via an environment variable map.
+    Configure and expose a structured logger using structlog so every
+    module can call `get_logger(__name__)` and get a consistent,
+    JSON-capable logger in production and pretty-printed in development.
 """
 
 from __future__ import annotations
@@ -34,20 +18,27 @@ from app.core.config import settings
 
 
 def _configure_structlog() -> None:
-    """Set up structlog shared processors and renderer based on environment."""
+    """Set up structlog processors and renderer based on environment."""
+    # Use stdlib logging as the backend so add_logger_name works correctly
+    logging.basicConfig(
+        format="%(message)s",
+        stream=sys.stdout,
+        level=logging.getLevelName(settings.log_level.upper()),
+    )
+
     shared_processors: list = [
-        structlog.contextvars.merge_contextvars,
-        structlog.stdlib.add_logger_name,
+        structlog.stdlib.filter_by_level,
         structlog.stdlib.add_log_level,
         structlog.stdlib.PositionalArgumentsFormatter(),
         structlog.processors.TimeStamper(fmt="iso"),
         structlog.processors.StackInfoRenderer(),
+        structlog.processors.format_exc_info,
     ]
 
     if settings.app_env == "production":
         renderer = structlog.processors.JSONRenderer()
     else:
-        renderer = structlog.dev.ConsoleRenderer(colors=True)
+        renderer = structlog.dev.ConsoleRenderer(colors=False)  # no ANSI in Windows cmd
 
     structlog.configure(
         processors=shared_processors + [renderer],
@@ -55,7 +46,7 @@ def _configure_structlog() -> None:
             logging.getLevelName(settings.log_level.upper())
         ),
         context_class=dict,
-        logger_factory=structlog.PrintLoggerFactory(sys.stdout),
+        logger_factory=structlog.stdlib.LoggerFactory(),   # uses stdlib — has .name
         cache_logger_on_first_use=True,
     )
 

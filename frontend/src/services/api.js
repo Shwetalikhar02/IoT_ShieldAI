@@ -1,101 +1,140 @@
 /**
  * services/api.js — Axios API Client
  *
- * Responsibility:
- *   Centralise all HTTP calls from the frontend to the FastAPI backend.
- *   Uses a single Axios instance with the correct base URL and timeout.
- *   All functions return the `data` field of the Axios response.
- *
- * TODO:
- *   - Implement uploadFirmware(files: FileList): POST /api/upload
- *   - Implement analyzeFirmware(uploadId: string): POST /api/analyze
- *   - Implement repairVulnerability(vulnId: string): POST /api/repair
- *   - Implement verifyPatch(patchId: string): POST /api/verify
- *   - Implement getReport(reportId: string): GET /api/report/{id}
- *   - Add request/response interceptors for global error handling.
- *   - Add an auth header interceptor once authentication is implemented.
+ * All HTTP calls from the frontend to the FastAPI backend.
+ * Base URL /api is proxied by Vite to http://localhost:8000.
  */
 
 import axios from 'axios'
 
+const BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
+
 const api = axios.create({
-  baseURL: '/api',
-  timeout: 120_000,  // 2 min — LLM calls can be slow
-  headers: {
-    'Content-Type': 'application/json',
-  },
+  baseURL: `${BASE}/api`,
+  timeout: 180_000,  // 3 min for pipeline runs
+  headers: { 'Content-Type': 'application/json' },
 })
 
-// ── Interceptors ────────────────────────────────────────────────────────────
-
+// ── Global error interceptor ─────────────────────────────────────────────────
 api.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    // TODO: Add toast notifications for API errors
-    console.error('[api]', error.response?.status, error.response?.data)
-    return Promise.reject(error)
-  },
+  (res) => res,
+  (err) => {
+    const msg = err.response?.data?.detail || err.message || 'Unknown error'
+    console.error('[api]', err.response?.status, msg)
+    return Promise.reject(new Error(msg))
+  }
 )
 
-// ── Endpoint functions ───────────────────────────────────────────────────────
+// ── Upload ───────────────────────────────────────────────────────────────────
 
-/**
- * POST /api/upload
- * @param {FileList|File[]} files — firmware source files
- * @returns {{ upload_id: string, files: Array }}
- */
-export async function uploadFirmware(files) {
-  // TODO: Build FormData and call api.post('/upload', formData, {...})
-  throw new Error('uploadFirmware not yet implemented')
+/** POST /api/upload — Upload firmware files */
+export async function uploadFirmware(files, onProgress) {
+  const formData = new FormData()
+  Array.from(files).forEach(f => formData.append('files', f))
+  const { data } = await api.post('/upload', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+    onUploadProgress: (e) => {
+      if (onProgress && e.total) onProgress(Math.round((e.loaded * 100) / e.total))
+    },
+  })
+  return data  // { upload_id, file_count, files }
 }
 
-/**
- * POST /api/analyze
- * @param {string} uploadId
- * @returns {VulnerabilityList}
- */
+// ── Demo ─────────────────────────────────────────────────────────────────────
+
+/** GET /api/demo/samples — List demo samples */
+export async function getDemoSamples() {
+  const { data } = await api.get('/demo/samples')
+  return data  // DemoSample[]
+}
+
+/** POST /api/demo/load/{sample_id} — Load a demo sample */
+export async function loadDemoSample(sampleId) {
+  const { data } = await api.post(`/demo/load/${sampleId}`)
+  return data  // { upload_id, sample_id, filename, file_path, expected }
+}
+
+// ── Analyze ──────────────────────────────────────────────────────────────────
+
+/** POST /api/analyze/{upload_id} — Run M1 static analysis */
 export async function analyzeFirmware(uploadId) {
-  // TODO: const { data } = await api.post('/analyze', { upload_id: uploadId })
-  throw new Error('analyzeFirmware not yet implemented')
+  const { data } = await api.post(`/analyze/${uploadId}`)
+  return data  // VulnerabilityList { total, vulnerabilities[] }
+}
+
+// ── Repair ───────────────────────────────────────────────────────────────────
+
+/** POST /api/repair/start — Start a repair session */
+export async function startRepair(vulnerabilityPayload) {
+  const { data } = await api.post('/repair/start', vulnerabilityPayload)
+  return data  // RepairSession
+}
+
+/** GET /api/repair/{session_id} — Get session state */
+export async function getRepairSession(sessionId) {
+  const { data } = await api.get(`/repair/${sessionId}`)
+  return data  // RepairSession
+}
+
+// ── Verify ───────────────────────────────────────────────────────────────────
+
+/** POST /api/verify — Verify a patch */
+export async function verifyPatch(patchId, uploadId) {
+  const { data } = await api.post('/verify', { patch_id: patchId, upload_id: uploadId })
+  return data  // VerificationResult
+}
+
+// ── Pipeline ─────────────────────────────────────────────────────────────────
+
+/** POST /api/pipeline/run/{upload_id} — Run full pipeline synchronously */
+export async function runPipeline(uploadId) {
+  const { data } = await api.post(`/pipeline/run/${uploadId}`)
+  return data  // PipelineResult
 }
 
 /**
- * POST /api/repair
- * @param {string} vulnerabilityId
+ * Stream pipeline progress via SSE.
  * @param {string} uploadId
- * @returns {Patch}
+ * @param {(event: string, data: object) => void} onEvent
+ * @returns {EventSource}
  */
-export async function repairVulnerability(vulnerabilityId, uploadId) {
-  // TODO: const { data } = await api.post('/repair', { vulnerability_id: vulnerabilityId, upload_id: uploadId })
-  throw new Error('repairVulnerability not yet implemented')
+export function streamPipeline(uploadId, onEvent) {
+  const url = `${BASE}/api/pipeline/stream/${uploadId}`
+  const es = new EventSource(url)
+  es.onmessage = (e) => {
+    try { onEvent('message', JSON.parse(e.data)) } catch {}
+  }
+  // Listen for named events
+  ;['step', 'complete', 'error'].forEach(name => {
+    es.addEventListener(name, (e) => {
+      try { onEvent(name, JSON.parse(e.data)) } catch {}
+    })
+  })
+  es.onerror = () => {
+    es.close()
+    onEvent('error', { message: 'SSE connection closed' })
+  }
+  return es
 }
 
-/**
- * POST /api/verify
- * @param {string} patchId
- * @returns {VerificationResult}
- */
-export async function verifyPatch(patchId) {
-  // TODO: const { data } = await api.post('/verify', { patch_id: patchId })
-  throw new Error('verifyPatch not yet implemented')
-}
+// ── Report ───────────────────────────────────────────────────────────────────
 
-/**
- * GET /api/report/{id}
- * @param {string} reportId
- * @returns {PipelineResult}
- */
+/** GET /api/report/{id} — Get pipeline report */
 export async function getReport(reportId) {
-  // TODO: const { data } = await api.get(`/report/${reportId}`)
-  throw new Error('getReport not yet implemented')
+  const { data } = await api.get(`/report/${reportId}`)
+  return data  // PipelineResult
 }
 
-/**
- * GET /health
- * @returns {{ status: string, version: string, environment: string, timestamp: string }}
- */
+/** GET /api/report/{id}/download — Download report as JSON */
+export function getReportDownloadUrl(reportId) {
+  return `${BASE}/api/report/${reportId}/download`
+}
+
+// ── Health ────────────────────────────────────────────────────────────────────
+
+/** GET /health — Health check */
 export async function checkHealth() {
-  const { data } = await axios.get('/health')
+  const { data } = await axios.get(`${BASE}/health`)
   return data
 }
 

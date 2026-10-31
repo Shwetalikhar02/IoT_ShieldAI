@@ -1,46 +1,219 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
-  * {
-    @apply border-dark-200;
-  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
   body {
     @apply bg-dark-950 text-dark-100 font-sans antialiased;
+    background-image:
+      radial-gradient(ellipse 80% 50% at 50% -20%, rgba(22, 163, 74, 0.12), transparent),
+      radial-gradient(ellipse 60% 40% at 90% 80%, rgba(14, 165, 233, 0.07), transparent);
   }
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { @apply bg-dark-900; }
+  ::-webkit-scrollbar-thumb { @apply bg-dark-700 rounded-full; }
+  ::-webkit-scrollbar-thumb:hover { @apply bg-dark-600; }
+  code, pre { @apply font-mono; }
 }
 
 @layer components {
+  /* ── Buttons ── */
   .btn-primary {
-    @apply inline-flex items-center gap-2 px-4 py-2 rounded-lg
-           bg-shield-600 hover:bg-shield-500 text-white font-medium
-           transition-all duration-200 ease-in-out
-           focus:outline-none focus:ring-2 focus:ring-shield-400 focus:ring-offset-2 focus:ring-offset-dark-950;
+    @apply inline-flex items-center gap-2 px-5 py-2.5 rounded-lg
+           bg-shield-600 hover:bg-shield-500 active:bg-shield-700
+           text-white font-semibold text-sm
+           transition-all duration-200 ease-out
+           focus:outline-none focus:ring-2 focus:ring-shield-400 focus:ring-offset-2 focus:ring-offset-dark-950
+           shadow-lg shadow-shield-900/30 hover:shadow-shield-900/50;
   }
   .btn-secondary {
     @apply inline-flex items-center gap-2 px-4 py-2 rounded-lg
-           bg-dark-800 hover:bg-dark-700 text-dark-100 font-medium
-           border border-dark-200/20 transition-all duration-200;
+           bg-dark-800 hover:bg-dark-700 active:bg-dark-900
+           text-dark-100 font-medium text-sm
+           border border-white/10 hover:border-white/20
+           transition-all duration-200;
   }
+  .btn-danger {
+    @apply inline-flex items-center gap-2 px-4 py-2 rounded-lg
+           bg-red-900/50 hover:bg-red-800/70 text-red-300
+           border border-red-700/50 font-medium text-sm
+           transition-all duration-200;
+  }
+  .btn-ghost {
+    @apply inline-flex items-center gap-2 px-3 py-1.5 rounded-lg
+           text-dark-300 hover:text-dark-100 hover:bg-white/5
+           transition-all duration-150 text-sm;
+  }
+
+  /* ── Cards ── */
   .card {
-    @apply bg-dark-900 rounded-xl border border-dark-200/10 p-6
-           shadow-lg shadow-dark-950/50;
+    @apply bg-dark-900/80 backdrop-blur-sm rounded-xl
+           border border-white/8
+           shadow-xl shadow-dark-950/60;
   }
+  .card-glass {
+    @apply bg-white/5 backdrop-blur-md rounded-xl
+           border border-white/10
+           shadow-2xl shadow-dark-950/80;
+  }
+
+  /* ── Badges ── */
   .badge-critical {
-    @apply inline-block px-2 py-0.5 rounded text-xs font-semibold
-           bg-red-900/50 text-red-300 border border-red-700/50;
+    @apply inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold
+           bg-red-500/15 text-red-300 border border-red-500/30;
   }
   .badge-high {
-    @apply inline-block px-2 py-0.5 rounded text-xs font-semibold
-           bg-orange-900/50 text-orange-300 border border-orange-700/50;
+    @apply inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold
+           bg-orange-500/15 text-orange-300 border border-orange-500/30;
   }
   .badge-medium {
-    @apply inline-block px-2 py-0.5 rounded text-xs font-semibold
-           bg-yellow-900/50 text-yellow-300 border border-yellow-700/50;
+    @apply inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold
+           bg-yellow-500/15 text-yellow-300 border border-yellow-500/30;
   }
   .badge-low {
-    @apply inline-block px-2 py-0.5 rounded text-xs font-semibold
-           bg-green-900/50 text-green-300 border border-green-700/50;
+    @apply inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold
+           bg-green-500/15 text-green-300 border border-green-500/30;
+  }
+  .badge-pass {
+    @apply inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold
+           bg-shield-500/15 text-shield-300 border border-shield-500/30;
+  }
+  .badge-fail {
+    @apply inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold
+           bg-red-500/15 text-red-300 border border-red-500/30;
+  }
+  .badge-template {
+    @apply inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold
+           bg-cyber-500/15 text-cyber-300 border border-cyber-500/30;
+  }
+  .badge-llm {
+    @apply inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold
+           bg-purple-500/15 text-purple-300 border border-purple-500/30;
+  }
+
+  /* ── Code blocks ── */
+  .code-block {
+    @apply bg-dark-950 rounded-lg p-4 font-mono text-sm
+           border border-white/8 overflow-x-auto
+           text-dark-200;
+  }
+  .code-line-add {
+    @apply block bg-shield-900/30 text-shield-300 pl-4 -mx-4 border-l-2 border-shield-500;
+  }
+  .code-line-del {
+    @apply block bg-red-900/30 text-red-300 pl-4 -mx-4 border-l-2 border-red-500;
+  }
+
+  /* ── Status indicators ── */
+  .status-dot {
+    @apply w-2 h-2 rounded-full inline-block;
+  }
+  .status-dot-pass { @apply status-dot bg-shield-400; }
+  .status-dot-fail { @apply status-dot bg-red-400; }
+  .status-dot-pending { @apply status-dot bg-dark-500; }
+  .status-dot-running {
+    @apply status-dot bg-cyber-400;
+    animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  /* ── Section labels ── */
+  .section-label {
+    @apply text-xs font-bold tracking-widest uppercase text-dark-400 mb-3;
+  }
+
+  /* ── Input ── */
+  .input-field {
+    @apply w-full bg-dark-800 border border-white/10 rounded-lg
+           px-4 py-2.5 text-sm text-dark-100 placeholder-dark-500
+           focus:outline-none focus:border-shield-500/50 focus:ring-1 focus:ring-shield-500/30
+           transition-colors duration-150;
+  }
+
+  /* ── Glow effects ── */
+  .glow-green {
+    box-shadow: 0 0 30px rgba(22, 163, 74, 0.25), 0 0 60px rgba(22, 163, 74, 0.1);
+  }
+  .glow-red {
+    box-shadow: 0 0 30px rgba(239, 68, 68, 0.25), 0 0 60px rgba(239, 68, 68, 0.1);
+  }
+  .glow-blue {
+    box-shadow: 0 0 30px rgba(14, 165, 233, 0.25), 0 0 60px rgba(14, 165, 233, 0.1);
+  }
+
+  /* ── Pipeline step ── */
+  .pipeline-step {
+    @apply flex items-center gap-3 px-4 py-3 rounded-lg
+           transition-all duration-200 cursor-pointer;
+  }
+  .pipeline-step-active {
+    @apply pipeline-step bg-shield-900/30 border border-shield-500/30;
+  }
+  .pipeline-step-done {
+    @apply pipeline-step bg-white/3 border border-white/5;
+  }
+  .pipeline-step-pending {
+    @apply pipeline-step border border-transparent hover:bg-white/3;
   }
 }
+
+@layer utilities {
+  .text-gradient {
+    @apply bg-gradient-to-r from-shield-400 to-cyber-400 bg-clip-text text-transparent;
+  }
+  .border-gradient {
+    border-image: linear-gradient(135deg, rgba(22,163,74,0.5), rgba(14,165,233,0.5)) 1;
+  }
+  .animate-fade-in {
+    animation: fadeIn 0.4s ease-out;
+  }
+  .animate-slide-up {
+    animation: slideUp 0.3s ease-out;
+  }
+  .animate-slide-in {
+    animation: slideIn 0.3s ease-out;
+  }
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(100,116,139,0.3) transparent;
+  }
+}
+
+/* ── Keyframes ── */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes slideIn {
+  from { opacity: 0; transform: translateX(-10px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── Spinner ── */
+.spinner {
+  width: 18px; height: 18px;
+  border: 2px solid rgba(255,255,255,0.1);
+  border-top-color: currentColor;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  display: inline-block;
+}
+
+/* ── Diff viewer ── */
+.diff-add { @apply bg-shield-900/25 border-l-2 border-shield-500 pl-3 text-shield-300; }
+.diff-del { @apply bg-red-900/25 border-l-2 border-red-500 pl-3 text-red-300; }
+.diff-ctx { @apply text-dark-400; }
