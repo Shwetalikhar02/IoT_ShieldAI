@@ -1,0 +1,6 @@
+{
+  "name": "CodeShield AI",
+  "description": "AI-powered IoT firmware vulnerability detection, repair, and verification platform for C/C++ embedded firmware.",
+  "permissions": [],
+  "capabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
