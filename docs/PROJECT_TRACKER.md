@@ -18,8 +18,8 @@
 | Task ID | Feature ID | Task Description | Assignee | Status | Commit |
 |---|---|---|---|---|---|
 | **T-001** | F-0 | Initial IoT ShieldAI base repository scaffold, docs, skills, and check_all script. | Lead Architect | Done | `d5cfd8d`, `4e0157e` |
-| **T-002** | F-A | Implement Unified Localization (`localizer.py`), `repair_session.py` schemas, `repair_loop.py` engine, refactor `feedback_loop.py`, and update `/api/repair`. | Member 1 & 2 | Done | `feat(pipeline)` |
-| **T-003** | F-B | Implement config settings, `llm_client.py` (with OpenAI/Anthropic adapters + deterministic mock), `dl_classifier.py`, and 3-tier repair routing. | Member 2 | Done | `feat(pipeline)` |
-| **T-004** | F-C | Implement explainable patches in `explainer.py` with structured reasoning, memory safety rationale, and IoT footprint. | Member 4 | Done | `feat(pipeline)` |
-| **T-005** | F-D | Implement real AST and lexical no-cheating check in `no_cheating_check.py` with violation tracking. | Member 3 | Done | `feat(pipeline)` |
-| **T-006** | F-E | Implement conversation-driven repair endpoint (`/api/repair/{session_id}/refine`), user constraint injection, and session persistence. | Member 2 & 4 | Done | `feat(pipeline)` |
+| **T-002** | F-A | Implement Unified Localization (`localizer.py`), `repair_session.py` schemas, `repair_loop.py` engine, refactor `feedback_loop.py`, and update `/api/repair`. | Member 1 & 2 | Done | `6c36420` |
+| **T-003** | F-B | Implement config settings, `llm_client.py` (with OpenAI/Anthropic adapters + deterministic mock), `dl_classifier.py`, and 3-tier repair routing. | Member 2 | Done | `6c36420` |
+| **T-004** | F-C | Implement explainable patches in `explainer.py` with structured reasoning, memory safety rationale, and IoT footprint. | Member 4 | Done | `6c36420` |
+| **T-005** | F-D | Implement real AST and lexical no-cheating check in `no_cheating_check.py` with violation tracking. | Member 3 | Done | `6c36420` |
+| **T-006** | F-E | Implement conversation-driven repair endpoint (`/api/repair/{session_id}/refine`), user constraint injection, and session persistence. | Member 2 & 4 | Done | `6c36420` |
