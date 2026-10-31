@@ -1,0 +1,16 @@
+{
+  "sample_id": "stack_overflow",
+  "filename": "stack_overflow.c",
+  "cwe_id": "CWE-121",
+  "vuln_type": "Stack Buffer Overflow",
+  "severity": "Critical",
+  "vulnerable_line": 29,
+  "function_name": "process_device_name",
+  "description": "strcpy() copies user-supplied input into a fixed-size 32-byte stack buffer without bounds checking, enabling stack corruption and potential code execution.",
+  "root_cause": "unbounded strcpy into 32-byte stack buffer device_name without length validation",
+  "exploit_arg": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+  "benign_arg": "IoTDevice-001",
+  "asan_trigger": "stack-buffer-overflow",
+  "fix_strategy": "template",
+  "fix_description": "Replace strcpy with strncpy bounded by sizeof(device_name)-1 and add explicit null termination"
+}

@@ -1,0 +1,16 @@
+{
+  "sample_id": "format_string",
+  "filename": "format_string.c",
+  "cwe_id": "CWE-134",
+  "vuln_type": "Uncontrolled Format String",
+  "severity": "High",
+  "vulnerable_line": 22,
+  "function_name": "log_sensor_data",
+  "description": "User-controlled string passed directly as printf format argument, enabling arbitrary memory read/write.",
+  "root_cause": "printf(user_format) without static format specifier allows format string injection",
+  "exploit_arg": "%x %x %x %x",
+  "benign_arg": "Temperature: 25.5C",
+  "asan_trigger": "format-string",
+  "fix_strategy": "template",
+  "fix_description": "Replace printf(user_format) with printf(\"%s\", user_format)"
+}

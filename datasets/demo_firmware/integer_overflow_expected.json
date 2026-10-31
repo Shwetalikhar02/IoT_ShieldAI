@@ -1,0 +1,16 @@
+{
+  "sample_id": "integer_overflow",
+  "filename": "integer_overflow.c",
+  "cwe_id": "CWE-190",
+  "vuln_type": "Integer Overflow",
+  "severity": "High",
+  "vulnerable_line": 18,
+  "function_name": "allocate_packet_buffer",
+  "description": "Integer multiplication num_items * sizeof(int) can overflow a 32-bit integer, producing a truncated allocation size smaller than required.",
+  "root_cause": "unchecked integer multiplication before malloc can overflow and produce undersized buffer",
+  "exploit_arg": "1073741825",
+  "benign_arg": "10",
+  "asan_trigger": "heap-buffer-overflow",
+  "fix_strategy": "template",
+  "fix_description": "Check num_items > SIZE_MAX / sizeof(int) before multiplication to guard against overflow"
+}

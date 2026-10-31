@@ -1,0 +1,16 @@
+{
+  "sample_id": "use_after_free",
+  "filename": "use_after_free.c",
+  "cwe_id": "CWE-416",
+  "vuln_type": "Use After Free",
+  "severity": "Critical",
+  "vulnerable_line": 28,
+  "function_name": "process_telemetry_packet",
+  "description": "Heap buffer freed in one code path but subsequently accessed via dangling pointer in the same function.",
+  "root_cause": "free(packet_buf) called but pointer not nullified, enabling dangling pointer dereference",
+  "exploit_arg": "crash",
+  "benign_arg": "ok",
+  "asan_trigger": "heap-use-after-free",
+  "fix_strategy": "template",
+  "fix_description": "Set packet_buf = NULL immediately after free() to prevent dangling pointer access"
+}

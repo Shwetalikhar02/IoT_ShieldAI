@@ -1,0 +1,16 @@
+{
+  "sample_id": "null_ptr_deref",
+  "filename": "null_ptr_deref.c",
+  "cwe_id": "CWE-476",
+  "vuln_type": "NULL Pointer Dereference",
+  "severity": "High",
+  "vulnerable_line": 20,
+  "function_name": "decode_sensor_packet",
+  "description": "malloc() return value is not checked for NULL before dereferencing under out-of-memory conditions.",
+  "root_cause": "missing NULL check after malloc allocation of SensorReading struct",
+  "exploit_arg": "",
+  "benign_arg": "42",
+  "asan_trigger": "SEGV on unknown address",
+  "fix_strategy": "template",
+  "fix_description": "Add NULL check after malloc: if (reading == NULL) return NULL"
+}
