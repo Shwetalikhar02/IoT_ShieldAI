@@ -4,15 +4,28 @@ import TopNav from './components/TopNav'
 import FileExplorerPanel from './components/FileExplorerPanel'
 import EditorView from './components/EditorView'
 import SecurityInsightsPanel from './components/SecurityInsightsPanel'
+import LandingPage from './components/LandingPage'
+import AuthModal from './components/AuthModal'
+import ProjectCreateModal from './components/ProjectCreateModal'
+
+// Views
 import OverviewView from './components/views/OverviewView'
+import ProjectsView from './components/views/ProjectsView'
 import FindingsView from './components/views/FindingsView'
+import CodeReviewView from './components/views/CodeReviewView'
 import RepairWorkbenchView from './components/views/RepairWorkbenchView'
 import VerificationConsoleView from './components/views/VerificationConsoleView'
 import ReportsView from './components/views/ReportsView'
+import UserReviewsView from './components/views/UserReviewsView'
 import SettingsView from './components/views/SettingsView'
+import ProfileView from './components/views/ProfileView'
+
+// Modals
 import BenchmarkModal from './components/BenchmarkModal'
 import CheatingDemoModal from './components/CheatingDemoModal'
 
+// APIs & Services
+import { authApi, projectsApi, reviewsApi } from './services/api'
 import { FIRMWARE_SAMPLES } from './data/firmwareSamples'
 import { analyzeFirmwareCode } from './services/analyzer'
 import { applyTemplateFix, refinePatchWithConstraint } from './services/repairEngine'
@@ -20,66 +33,184 @@ import { verifyPatchCandidate } from './services/verifier'
 import { calculateIoTMetrics, buildExplainabilityReport } from './services/metrics'
 
 export default function App() {
-  // Navigation View State ('explorer' | 'overview' | 'findings' | 'repair' | 'verify' | 'reports' | 'settings')
-  const [activeView, setActiveView] = useState('explorer')
+  // Authentication State
+  const [currentUser, setCurrentUser] = useState(null)
+  const [authLoading, setAuthLoading] = useState(true)
+  const [showAuthModal, setShowAuthModal] = useState(false)
+  const [authModalMode, setAuthModalMode] = useState('login')
 
-  // File state
-  const [files, setFiles] = useState(FIRMWARE_SAMPLES)
-  const [activeFileId, setActiveFileId] = useState('stack_overflow')
+  // Navigation View State
+  // 'overview' | 'projects' | 'explorer' | 'findings' | 'repair' | 'assistant' | 'verify' | 'reports' | 'reviews' | 'settings' | 'profile'
+  const [activeView, setActiveView] = useState('overview')
+
+  // Projects State
+  const [projects, setProjects] = useState([])
+  const [activeProjectId, setActiveProjectId] = useState(null)
+  const [showProjectModal, setShowProjectModal] = useState(false)
+
+  // Files & Editor State
+  const [files, setFiles] = useState([])
+  const [activeFileId, setActiveFileId] = useState(null)
   const activeFile = files.find(f => f.id === activeFileId) || files[0]
-  const [currentCode, setCurrentCode] = useState(activeFile?.code || '')
+  const [currentCode, setCurrentCode] = useState('')
 
-  // Analysis & Vulnerability state (M1)
+  // Analysis & Vulnerability State (M1)
   const [vulnerabilities, setVulnerabilities] = useState([])
   const [activeVuln, setActiveVuln] = useState(null)
 
-  // Repair state (M2)
+  // Repair & Code Review State (M2)
   const [candidatePatch, setCandidatePatch] = useState(null)
   const [isDiffMode, setIsDiffMode] = useState(false)
   const [appliedPatches, setAppliedPatches] = useState([])
+  const [appliedReviews, setAppliedReviews] = useState([])
 
-  // Verification state (M3)
+  // Verification State (M3)
   const [verificationResult, setVerificationResult] = useState(null)
   const [verificationsHistory, setVerificationsHistory] = useState([])
   const [isVerifying, setIsVerifying] = useState(false)
 
-  // Metrics & Report state (M4)
+  // Metrics & Reporting State (M4)
   const [metrics, setMetrics] = useState(null)
   const [reportExplanation, setReportExplanation] = useState('')
 
   // UI state
   const [pipelineRunning, setPipelineRunning] = useState(false)
-  const [provider, setProvider] = useState('Mock (Offline)')
+  const [provider, setProvider] = useState('Google Gemini 2.5 Flash')
   const [chatHistory, setChatHistory] = useState([])
 
   // Modals
   const [showBenchmarkModal, setShowBenchmarkModal] = useState(false)
   const [showCheatingDemo, setShowCheatingDemo] = useState(false)
 
-  // Sync code whenever active file changes
+  // 1. Initial Authentication Check
+  useEffect(() => {
+    checkAuthSession()
+  }, [])
+
+  const checkAuthSession = async () => {
+    setAuthLoading(true)
+    try {
+      const data = await authApi.getMe()
+      if (data?.user) {
+        setCurrentUser(data.user)
+        await loadUserProjects(data.user.id)
+      }
+    } catch (err) {
+      setCurrentUser(null)
+    } finally {
+      setAuthLoading(false)
+    }
+  }
+
+  // 2. Load User Projects
+  const loadUserProjects = async (userId) => {
+    try {
+      const data = await projectsApi.list()
+      const list = data?.projects || []
+      setProjects(list)
+      if (list.length > 0) {
+        const targetId = activeProjectId && list.some(p => p.id === activeProjectId)
+          ? activeProjectId
+          : list[0].id
+        setActiveProjectId(targetId)
+        await loadProjectDetails(targetId)
+      } else {
+        // Fallback to sample data if user has no projects
+        setFiles(FIRMWARE_SAMPLES)
+        setActiveFileId('stack_overflow')
+        setCurrentCode(FIRMWARE_SAMPLES[0]?.code || '')
+        runLocalAnalysis(FIRMWARE_SAMPLES[0]?.code, FIRMWARE_SAMPLES[0]?.name)
+      }
+    } catch (err) {
+      console.warn('Failed to fetch projects:', err)
+      // Fallback to bundled sample data
+      setFiles(FIRMWARE_SAMPLES)
+      setActiveFileId('stack_overflow')
+      setCurrentCode(FIRMWARE_SAMPLES[0]?.code || '')
+      runLocalAnalysis(FIRMWARE_SAMPLES[0]?.code, FIRMWARE_SAMPLES[0]?.name)
+    }
+  }
+
+  // 3. Load Project Details (Files, Findings, Reviews)
+  const loadProjectDetails = async (projectId) => {
+    try {
+      const data = await projectsApi.get(projectId)
+      if (data) {
+        const projectFiles = data.files || []
+        setFiles(projectFiles)
+        setVulnerabilities(data.vulnerabilities || [])
+        setAppliedPatches(data.patches || [])
+        setAppliedReviews(data.reviews || [])
+        setVerificationsHistory(data.verifications || [])
+
+        if (projectFiles.length > 0) {
+          const first = projectFiles[0]
+          setActiveFileId(first.id)
+          setCurrentCode(first.code)
+          if (data.vulnerabilities?.length > 0) {
+            setActiveVuln(data.vulnerabilities[0])
+          } else {
+            runLocalAnalysis(first.code, first.name)
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('Failed to load project details:', err)
+    }
+  }
+
+  // Sync editor buffer when active file changes
   useEffect(() => {
     if (activeFile) {
       setCurrentCode(activeFile.code)
       setCandidatePatch(null)
       setIsDiffMode(false)
-      setVerificationResult(null)
-      setMetrics(null)
-      runAnalysis(activeFile.code, activeFile.name)
+      runLocalAnalysis(activeFile.code, activeFile.name)
     }
   }, [activeFileId])
 
   // ── M1: Analysis ─────────────────────────────────────────────────────────────
-  const runAnalysis = (sourceCode = currentCode, filename = activeFile?.name) => {
+  const runLocalAnalysis = (sourceCode = currentCode, filename = activeFile?.name) => {
     const findings = analyzeFirmwareCode(sourceCode, filename)
     setVulnerabilities(findings)
     setActiveVuln(findings[0] || null)
     return findings
   }
 
+  const handleRunScan = async () => {
+    if (activeProjectId) {
+      setPipelineRunning(true)
+      try {
+        const res = await projectsApi.scan(activeProjectId)
+        setVulnerabilities(res.vulnerabilities || [])
+        if (res.vulnerabilities?.length > 0) {
+          setActiveVuln(res.vulnerabilities[0])
+        }
+      } catch (err) {
+        runLocalAnalysis(currentCode, activeFile?.name)
+      } finally {
+        setPipelineRunning(false)
+      }
+    } else {
+      runLocalAnalysis(currentCode, activeFile?.name)
+    }
+  }
+
   // ── M2: Fix with AI / Quick-Fix ───────────────────────────────────────────────
   const handleTriggerQuickFix = (vuln = vulnerabilities[0]) => {
     if (!vuln) return
-    const patch = applyTemplateFix(vuln, currentCode)
+    const patch = applyTemplateFix(
+      {
+        id: vuln.id,
+        cwe_id: vuln.cwe_id || vuln.cweId,
+        vuln_type: vuln.vuln_type || vuln.vulnType,
+        severity: vuln.severity,
+        code_snippet: vuln.code_snippet || vuln.codeSnippet,
+        file_path: vuln.file_path || vuln.filePath,
+        line_start: vuln.line_start || vuln.lineStart
+      },
+      currentCode
+    )
     if (patch) {
       setCandidatePatch(patch)
       setIsDiffMode(true)
@@ -88,26 +219,65 @@ export default function App() {
         ...prev,
         {
           role: 'ai',
-          text: `Synthesized remediation for ${vuln.vuln_type} (${vuln.cwe_id}):\n${patch.explanation}`,
+          text: `Synthesized remediation for ${vuln.vuln_type || vuln.vulnType} (${vuln.cwe_id || vuln.cweId}):\n${patch.explanation}`,
           timestamp: new Date().toLocaleTimeString()
         }
       ])
     }
   }
 
-  // ── Accept Patch & Verify (M3) ──────────────────────────────────────────────
-  const handleAcceptPatch = () => {
-    if (!candidatePatch) return
-    const newCode = candidatePatch.full_patched_code || currentCode
+  // ── M5: AI Code Review & Fix Approval ─────────────────────────────────────────
+  const handleApprovePatch = async (patch = candidatePatch, vuln = activeVuln, reviewNotes = '') => {
+    if (!patch) return
+    const newCode = patch.full_patched_code || patch.fullPatchedCode || currentCode
+
+    if (activeProjectId && patch.id) {
+      try {
+        const res = await projectsApi.submitReview(
+          activeProjectId,
+          patch.id,
+          vuln?.id,
+          'approved',
+          reviewNotes
+        )
+        if (res.review) {
+          setAppliedReviews(prev => [res.review, ...prev])
+        }
+        if (res.verification) {
+          setVerificationResult(res.verification)
+          setVerificationsHistory(prev => [res.verification, ...prev])
+        }
+      } catch (err) {
+        console.warn('Backend review submission failed, applying locally:', err)
+      }
+    }
+
+    // Apply code locally & execute verification
     setCurrentCode(newCode)
     setIsDiffMode(false)
-    setAppliedPatches(prev => [...prev, candidatePatch])
-
-    runVerification(candidatePatch, newCode)
+    setAppliedPatches(prev => [...prev, patch])
+    runVerification(patch, newCode)
     setCandidatePatch(null)
+
+    // Mark as resolved in local list
+    setVulnerabilities(prev =>
+      prev.map(v => (v.id === vuln?.id ? { ...v, status: 'resolved' } : v))
+    )
   }
 
-  const handleRejectPatch = () => {
+  const handleRejectPatch = async (patch = candidatePatch, vuln = activeVuln, reviewNotes = '') => {
+    if (activeProjectId && patch?.id) {
+      try {
+        const res = await projectsApi.submitReview(
+          activeProjectId,
+          patch.id,
+          vuln?.id,
+          'rejected',
+          reviewNotes
+        )
+        if (res.review) setAppliedReviews(prev => [res.review, ...prev])
+      } catch (e) {}
+    }
     setCandidatePatch(null)
     setIsDiffMode(false)
   }
@@ -167,7 +337,7 @@ export default function App() {
   // ── Full Pipeline ────────────────────────────────────────────────────────────
   const handleRunPipeline = async () => {
     setPipelineRunning(true)
-    const findings = runAnalysis(currentCode, activeFile.name)
+    const findings = runLocalAnalysis(currentCode, activeFile?.name)
 
     if (findings.length === 0) {
       setPipelineRunning(false)
@@ -188,10 +358,10 @@ export default function App() {
       setVerificationResult(ver)
       setVerificationsHistory([ver])
 
-      const remaining = analyzeFirmwareCode(patch.full_patched_code, activeFile.name)
+      const remaining = analyzeFirmwareCode(patch.full_patched_code, activeFile?.name)
       setVulnerabilities(remaining)
 
-      const calculatedMetrics = calculateIoTMetrics(activeFile.code, patch.full_patched_code, 1)
+      const calculatedMetrics = calculateIoTMetrics(activeFile?.code, patch.full_patched_code, 1)
       setMetrics(calculatedMetrics)
 
       const expl = buildExplainabilityReport([targetVuln], [patch], [ver], calculatedMetrics)
@@ -201,12 +371,67 @@ export default function App() {
     setPipelineRunning(false)
   }
 
+  // ── Projects CRUD Handlers ───────────────────────────────────────────────────
+  const handleCreateProject = async (name, description, targetArch) => {
+    try {
+      const res = await projectsApi.create(name, description, targetArch)
+      if (res?.project) {
+        setProjects(prev => [res.project, ...prev])
+        setActiveProjectId(res.project.id)
+        await loadProjectDetails(res.project.id)
+        setActiveView('overview')
+      }
+    } catch (err) {
+      alert(err?.message || 'Failed to create project.')
+    }
+  }
+
+  const handleUpdateProject = async (id, data) => {
+    try {
+      const res = await projectsApi.update(id, data)
+      if (res?.project) {
+        setProjects(prev => prev.map(p => (p.id === id ? { ...p, ...res.project } : p)))
+      }
+    } catch (err) {
+      alert(err?.message || 'Failed to update project.')
+    }
+  }
+
+  const handleDeleteProject = async (id) => {
+    try {
+      await projectsApi.delete(id)
+      const remaining = projects.filter(p => p.id !== id)
+      setProjects(remaining)
+      if (activeProjectId === id) {
+        if (remaining.length > 0) {
+          setActiveProjectId(remaining[0].id)
+          await loadProjectDetails(remaining[0].id)
+        } else {
+          setActiveProjectId(null)
+          setFiles([])
+        }
+      }
+    } catch (err) {
+      alert(err?.message || 'Failed to delete project.')
+    }
+  }
+
   // ── File upload / new file ──────────────────────────────────────────────────
   const handleFileUpload = (uploadedFiles) => {
     Array.from(uploadedFiles).forEach((file) => {
       const reader = new FileReader()
-      reader.onload = (e) => {
+      reader.onload = async (e) => {
         const content = e.target.result
+        if (activeProjectId) {
+          try {
+            const res = await projectsApi.addFile(activeProjectId, file.name, content, 'firmware')
+            if (res.file) {
+              setFiles(prev => [...prev, res.file])
+              setActiveFileId(res.file.id)
+            }
+            return
+          } catch (err) {}
+        }
         const newFile = {
           id: `custom_${Date.now()}_${Math.random().toString(36).substring(7)}`,
           name: file.name,
@@ -222,7 +447,7 @@ export default function App() {
     })
   }
 
-  const handleNewFile = () => {
+  const handleNewFile = async () => {
     const filename = `custom_firmware_${files.length + 1}.c`
     const skeleton = `/*
  * Embedded Firmware Routine
@@ -240,6 +465,17 @@ int main(void) {
     process_frame("ping");
     return 0;
 }`
+    if (activeProjectId) {
+      try {
+        const res = await projectsApi.addFile(activeProjectId, filename, skeleton, 'firmware')
+        if (res.file) {
+          setFiles(prev => [...prev, res.file])
+          setActiveFileId(res.file.id)
+        }
+        return
+      } catch (err) {}
+    }
+
     const newFile = {
       id: `custom_${Date.now()}`,
       name: filename,
@@ -253,7 +489,7 @@ int main(void) {
   }
 
   const handleInspectVuln = (vuln) => {
-    const targetFile = files.find(f => f.name === vuln.file_path)
+    const targetFile = files.find(f => f.name === (vuln.file_path || vuln.filePath))
     if (targetFile && targetFile.id !== activeFileId) {
       setActiveFileId(targetFile.id)
     }
@@ -266,35 +502,139 @@ int main(void) {
     handleTriggerQuickFix(vuln)
   }
 
+  const handleLogout = async () => {
+    await authApi.logout()
+    setCurrentUser(null)
+    setActiveView('overview')
+  }
+
+  const activeProject = projects.find(p => p.id === activeProjectId) || projects[0]
+
+  // If session is still loading
+  if (authLoading) {
+    return (
+      <div className="flex h-screen w-screen items-center justify-center bg-[#101310] text-[#F3F5EF]">
+        <div className="flex flex-col items-center gap-3">
+          <div className="cs-spinner w-6 h-6 border-2" />
+          <span className="font-mono text-xs text-[#9AA39B]">Initializing CodeShield AI session...</span>
+        </div>
+      </div>
+    )
+  }
+
+  // If user is unauthenticated, show professional Landing Page
+  if (!currentUser) {
+    return (
+      <>
+        <LandingPage
+          onOpenAuth={(mode) => {
+            if (mode === 'demo') {
+              setAuthModalMode('login')
+              setShowAuthModal(true)
+            } else {
+              setAuthModalMode(mode)
+              setShowAuthModal(true)
+            }
+          }}
+        />
+        <AuthModal
+          isOpen={showAuthModal}
+          initialMode={authModalMode}
+          onClose={() => setShowAuthModal(false)}
+          onAuthSuccess={(user) => {
+            setCurrentUser(user)
+            setShowAuthModal(false)
+            loadUserProjects(user.id)
+          }}
+        />
+      </>
+    )
+  }
+
+  // Authenticated Developer Dashboard Experience
   return (
     <div className="flex h-screen w-screen bg-[#101310] text-[#F3F5EF] overflow-hidden font-sans">
-      {/* 1. Slim Left Navigation Sidebar */}
+      {/* 1. Categorized Navigation Sidebar */}
       <NavigationSidebar
         activeView={activeView}
         onSelectView={setActiveView}
-        vulnCount={vulnerabilities.length}
+        vulnCount={vulnerabilities.filter(v => v.status !== 'resolved').length}
         verifiedCount={appliedPatches.length}
+        currentUser={currentUser}
+        activeProject={activeProject}
+        onCreateProject={() => setShowProjectModal(true)}
+        onOpenBenchmark={() => setShowBenchmarkModal(true)}
+        onOpenCheatingDemo={() => setShowCheatingDemo(true)}
+        onRunPipeline={handleRunPipeline}
+        onLogout={handleLogout}
       />
 
-      {/* Main Column */}
+      {/* Main Workspace Column */}
       <div className="flex-1 flex flex-col h-full overflow-hidden">
         {/* 2. Top Navigation Bar */}
         <TopNav
           activeFile={activeFile}
-          activeView={activeView}
-          onRunScan={() => runAnalysis(currentCode, activeFile.name)}
+          activeProject={activeProject}
+          projects={projects}
+          onSelectProject={(id) => {
+            setActiveProjectId(id)
+            loadProjectDetails(id)
+          }}
+          onCreateProject={() => setShowProjectModal(true)}
+          onRunScan={handleRunScan}
           onRunPipeline={handleRunPipeline}
           onOpenBenchmark={() => setShowBenchmarkModal(true)}
           onOpenCheatingDemo={() => setShowCheatingDemo(true)}
+          onNavigateProfile={() => setActiveView('profile')}
+          onNavigateSettings={() => setActiveView('settings')}
+          onLogout={handleLogout}
           pipelineRunning={pipelineRunning}
-          vulnCount={vulnerabilities.length}
+          vulnCount={vulnerabilities.filter(v => v.status !== 'resolved').length}
+          currentUser={currentUser}
         />
 
         {/* 3. Main Workspace Viewport */}
         <div className="flex-1 flex overflow-hidden">
+          {activeView === 'overview' && (
+            <OverviewView
+              currentUser={currentUser}
+              projects={projects}
+              activeProject={activeProject}
+              files={files}
+              vulnerabilities={vulnerabilities}
+              patches={appliedPatches}
+              verifications={verificationsHistory}
+              metrics={metrics}
+              onNavigateToExplorer={() => setActiveView('explorer')}
+              onNavigateToProjects={() => setActiveView('projects')}
+              onSelectProject={(id) => {
+                setActiveProjectId(id)
+                loadProjectDetails(id)
+              }}
+              onCreateProject={() => setShowProjectModal(true)}
+              onRunScan={handleRunScan}
+              onRunPipeline={handleRunPipeline}
+            />
+          )}
+
+          {activeView === 'projects' && (
+            <ProjectsView
+              projects={projects}
+              activeProjectId={activeProjectId}
+              onSelectProject={(id) => {
+                setActiveProjectId(id)
+                loadProjectDetails(id)
+                setActiveView('overview')
+              }}
+              onCreateProject={() => setShowProjectModal(true)}
+              onUpdateProject={handleUpdateProject}
+              onDeleteProject={handleDeleteProject}
+            />
+          )}
+
           {activeView === 'explorer' && (
             <>
-              {/* File Explorer */}
+              {/* File Explorer Panel */}
               <FileExplorerPanel
                 files={files}
                 activeFileId={activeFileId}
@@ -304,7 +644,7 @@ int main(void) {
                 vulnerabilities={vulnerabilities}
               />
 
-              {/* Source Code Editor in Center */}
+              {/* Source Code Editor */}
               <EditorView
                 code={currentCode}
                 onChangeCode={setCurrentCode}
@@ -312,15 +652,16 @@ int main(void) {
                 vulnerabilities={vulnerabilities}
                 activeVuln={activeVuln}
                 candidatePatch={candidatePatch}
-                onAcceptPatch={handleAcceptPatch}
+                onAcceptPatch={handleApprovePatch}
                 onRejectPatch={handleRejectPatch}
                 onTriggerQuickFix={handleTriggerQuickFix}
                 isDiffMode={isDiffMode}
                 onToggleDiffMode={() => setIsDiffMode(!isDiffMode)}
               />
 
-              {/* Security Insights on Right */}
+              {/* Security Insights & AI Assistant on Right */}
               <SecurityInsightsPanel
+                activeFile={activeFile}
                 vulnerabilities={vulnerabilities}
                 activeVuln={activeVuln}
                 candidatePatch={candidatePatch}
@@ -329,21 +670,9 @@ int main(void) {
                 onTriggerQuickFix={handleTriggerQuickFix}
                 onRunVerify={() => runVerification(candidatePatch, currentCode)}
                 isVerifying={isVerifying}
+                projectId={activeProjectId}
               />
             </>
-          )}
-
-          {activeView === 'overview' && (
-            <OverviewView
-              files={files}
-              vulnerabilities={vulnerabilities}
-              patches={appliedPatches}
-              verifications={verificationsHistory}
-              metrics={metrics}
-              onNavigateToExplorer={() => setActiveView('explorer')}
-              onRunScan={() => runAnalysis(currentCode, activeFile.name)}
-              onRunPipeline={handleRunPipeline}
-            />
           )}
 
           {activeView === 'findings' && (
@@ -355,19 +684,40 @@ int main(void) {
           )}
 
           {activeView === 'repair' && (
-            <RepairWorkbenchView
-              activeFile={activeFile}
+            <CodeReviewView
               vulnerabilities={vulnerabilities}
               activeVuln={activeVuln}
               candidatePatch={candidatePatch}
-              appliedPatches={appliedPatches}
+              appliedReviews={appliedReviews}
+              onApproveFix={handleApprovePatch}
+              onRejectFix={handleRejectPatch}
+              onGenerateFix={handleTriggerQuickFix}
+              onRequestRefinement={handleSendConstraint}
+              onRunVerification={() => runVerification(candidatePatch, currentCode)}
+              isVerifying={isVerifying}
               verificationResult={verificationResult}
-              onTriggerQuickFix={handleTriggerQuickFix}
-              onAcceptPatch={handleAcceptPatch}
-              onRejectPatch={handleRejectPatch}
-              onSendConstraint={handleSendConstraint}
-              chatHistory={chatHistory}
+              onSelectVuln={setActiveVuln}
             />
+          )}
+
+          {activeView === 'assistant' && (
+            <div className="flex-1 h-full p-6 flex flex-col bg-[#101310]">
+              <div className="max-w-4xl w-full mx-auto flex-1 rounded-2xl overflow-hidden border border-[#2B332D] shadow-2xl flex flex-col">
+                <SecurityInsightsPanel
+                  activeFile={activeFile}
+                  vulnerabilities={vulnerabilities}
+                  activeVuln={activeVuln}
+                  candidatePatch={candidatePatch}
+                  verificationResult={verificationResult}
+                  metrics={metrics}
+                  onTriggerQuickFix={handleTriggerQuickFix}
+                  onRunVerify={() => runVerification(candidatePatch, currentCode)}
+                  isVerifying={isVerifying}
+                  projectId={activeProjectId}
+                  defaultTab="assistant"
+                />
+              </div>
+            </div>
           )}
 
           {activeView === 'verify' && (
@@ -381,12 +731,27 @@ int main(void) {
 
           {activeView === 'reports' && (
             <ReportsView
+              activeProject={activeProject}
               activeFile={activeFile}
               vulnerabilities={vulnerabilities}
               patches={appliedPatches.length > 0 ? appliedPatches : candidatePatch ? [candidatePatch] : []}
               verifications={verificationsHistory.length > 0 ? verificationsHistory : verificationResult ? [verificationResult] : []}
+              reviews={appliedReviews}
               metrics={metrics}
               explanation={reportExplanation}
+            />
+          )}
+
+          {activeView === 'reviews' && (
+            <UserReviewsView currentUser={currentUser} />
+          )}
+
+          {activeView === 'profile' && (
+            <ProfileView
+              currentUser={currentUser}
+              projects={projects}
+              onUpdateUser={setCurrentUser}
+              onLogout={handleLogout}
             />
           )}
 
@@ -400,6 +765,12 @@ int main(void) {
       </div>
 
       {/* Modals */}
+      <ProjectCreateModal
+        isOpen={showProjectModal}
+        onClose={() => setShowProjectModal(false)}
+        onCreate={handleCreateProject}
+      />
+
       <BenchmarkModal
         isOpen={showBenchmarkModal}
         onClose={() => setShowBenchmarkModal(false)}

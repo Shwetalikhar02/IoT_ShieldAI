@@ -1,0 +1,146 @@
+{
+  "users": [
+    {
+      "id": "usr_demo_01",
+      "name": "DevSecOps Engineer",
+      "email": "demo@codeshield.ai",
+      "passwordHash": "$2b$10$ZbBmzSiBwfRS8/25nrF5kelwEWUR7YxrxgxkutlrBm25poaLionUW",
+      "createdAt": "2026-10-31T22:17:24.346Z",
+      "updatedAt": "2026-10-31T22:17:24.347Z"
+    }
+  ],
+  "projects": [
+    {
+      "id": "proj_demo_gateway",
+      "userId": "usr_demo_01",
+      "name": "IoT Gateway Core Firmware",
+      "description": "Bare-metal C communications and sensor ingest module for ARM Cortex-M4 gateway device.",
+      "targetArch": "ARM Cortex-M4",
+      "createdAt": "2026-10-31T22:17:24.347Z",
+      "updatedAt": "2026-10-31T22:17:24.347Z"
+    }
+  ],
+  "files": [
+    {
+      "id": "file_proj_demo_gateway_1",
+      "projectId": "proj_demo_gateway",
+      "userId": "usr_demo_01",
+      "name": "stack_overflow.c",
+      "category": "embedded_driver",
+      "code": "/*\n * IoT Sensor Telemetry Packet Processor\n * Target: ARM Cortex-M4 (Bare Metal)\n */\n#include <stdio.h>\n#include <string.h>\n\nvoid process_device_name(const char *input) {\n    char device_name[32]; // Fixed 32-byte stack buffer\n    \n    // VULNERABILITY (CWE-121): Unsafe strcpy() without length validation\n    strcpy(device_name, input);\n    \n    printf(\"[telemetry] Ingested device name: %s\\n\", device_name);\n}\n\nint main(int argc, char *argv[]) {\n    const char *payload = argc > 1 ? argv[1] : \"Sensor_Node_Alpha_7749\";\n    process_device_name(payload);\n    return 0;\n}",
+      "sizeBytes": 571,
+      "targetArch": "ARM Cortex-M4",
+      "createdAt": "2026-10-31T22:17:24.347Z",
+      "updatedAt": "2026-10-31T22:17:24.347Z"
+    },
+    {
+      "id": "file_proj_demo_gateway_2",
+      "projectId": "proj_demo_gateway",
+      "userId": "usr_demo_01",
+      "name": "null_ptr_deref.c",
+      "category": "embedded_driver",
+      "code": "/*\n * Sensor Reading Allocator & Ingest\n */\n#include <stdio.h>\n#include <stdlib.h>\n\ntypedef struct {\n    float temperature;\n    float humidity;\n} SensorData;\n\nSensorData* allocate_sensor_record(void) {\n    // VULNERABILITY (CWE-476): Unchecked dynamic allocation\n    SensorData *reading = (SensorData *)malloc(sizeof(SensorData));\n    \n    // Direct dereference without checking reading != NULL\n    reading->temperature = 24.5f;\n    reading->humidity = 58.2f;\n    return reading;\n}\n\nint main(void) {\n    SensorData *record = allocate_sensor_record();\n    if (record) free(record);\n    return 0;\n}",
+      "sizeBytes": 596,
+      "targetArch": "ARM Cortex-M4",
+      "createdAt": "2026-10-31T22:17:24.347Z",
+      "updatedAt": "2026-10-31T22:17:24.347Z"
+    },
+    {
+      "id": "file_proj_demo_gateway_3",
+      "projectId": "proj_demo_gateway",
+      "userId": "usr_demo_01",
+      "name": "format_string.c",
+      "category": "embedded_driver",
+      "code": "/*\n * Telemetry Diagnostic Logger\n */\n#include <stdio.h>\n\nvoid log_device_event(const char *event_message) {\n    // VULNERABILITY (CWE-134): Format string vulnerability\n    printf(event_message);\n    printf(\"\\n\");\n}\n\nint main(void) {\n    log_device_event(\"Device booted into safe recovery mode\");\n    return 0;\n}",
+      "sizeBytes": 312,
+      "targetArch": "ARM Cortex-M4",
+      "createdAt": "2026-10-31T22:17:24.347Z",
+      "updatedAt": "2026-10-31T22:17:24.347Z"
+    },
+    {
+      "id": "file_proj_demo_gateway_4",
+      "projectId": "proj_demo_gateway",
+      "userId": "usr_demo_01",
+      "name": "use_after_free.c",
+      "category": "embedded_driver",
+      "code": "/*\n * Circular Ring Buffer Packet Free\n */\n#include <stdio.h>\n#include <stdlib.h>\n\ntypedef struct {\n    int id;\n    char payload[64];\n} TelemetryPacket;\n\nvoid release_packet(TelemetryPacket *pkt) {\n    if (pkt) {\n        // VULNERABILITY (CWE-416): Pointer freed without nullification\n        free(pkt);\n    }\n}\n\nint main(void) {\n    TelemetryPacket *p = (TelemetryPacket *)malloc(sizeof(TelemetryPacket));\n    release_packet(p);\n    return 0;\n}",
+      "sizeBytes": 445,
+      "targetArch": "ARM Cortex-M4",
+      "createdAt": "2026-10-31T22:17:24.347Z",
+      "updatedAt": "2026-10-31T22:17:24.347Z"
+    },
+    {
+      "id": "file_proj_demo_gateway_5",
+      "projectId": "proj_demo_gateway",
+      "userId": "usr_demo_01",
+      "name": "integer_overflow.c",
+      "category": "embedded_driver",
+      "code": "/*\n * Batch Calibration Ingest\n */\n#include <stdio.h>\n#include <stdlib.h>\n#include <stdint.h>\n\nvoid allocate_calibration_table(size_t record_count) {\n    // VULNERABILITY (CWE-190): Integer multiplication overflow before sizing\n    size_t total_bytes = record_count * sizeof(uint32_t);\n    uint32_t *table = (uint32_t *)malloc(total_bytes);\n    if (table) {\n        printf(\"[calib] Table allocated: %zu bytes\\n\", total_bytes);\n        free(table);\n    }\n}\n\nint main(void) {\n    allocate_calibration_table(100);\n    return 0;\n}",
+      "sizeBytes": 526,
+      "targetArch": "ARM Cortex-M4",
+      "createdAt": "2026-10-31T22:17:24.347Z",
+      "updatedAt": "2026-10-31T22:17:24.347Z"
+    }
+  ],
+  "vulnerabilities": [],
+  "patches": [],
+  "codeReviews": [],
+  "verifications": [],
+  "userReviews": [
+    {
+      "id": "apprev_1793485278254_4xtxm",
+      "userId": "usr_demo_01",
+      "userName": "DevSecOps Engineer",
+      "userEmail": "demo@codeshield.ai",
+      "rating": 5,
+      "title": "Exceptional AST Verification Pipeline",
+      "feedback": "Tested the stack overflow and integer multiplication overflow patches on ARM Cortex-M4. The verification checks detected zero memory leaks and prevented premature return bypasses.",
+      "category": "Overall Experience",
+      "createdAt": "2026-10-31T22:21:18.254Z",
+      "updatedAt": "2026-10-31T22:21:18.254Z"
+    },
+    {
+      "id": "rev_01",
+      "userId": "usr_community_1",
+      "userName": "Alex Chen",
+      "userEmail": "alex.chen@embed-sec.org",
+      "rating": 5,
+      "title": "Outstanding memory-safety verification for Cortex-M",
+      "feedback": "The anti-cheating gate and AddressSanitizer simulation are incredible. It caught two subtle buffer truncations that other static linters completely missed.",
+      "category": "Verification",
+      "createdAt": "2026-10-28T22:17:24.347Z",
+      "updatedAt": "2026-10-28T22:17:24.347Z"
+    },
+    {
+      "id": "rev_02",
+      "userId": "usr_community_2",
+      "userName": "Elena Rostova",
+      "userEmail": "e.rostova@firmwarelab.io",
+      "rating": 5,
+      "title": "AI Security Assistant understands true embedded constraints",
+      "feedback": "Having the Gemini assistant explain compiler flags and ROM/RAM overhead in context makes reviewing C patches 10x faster.",
+      "category": "AI Assistant",
+      "createdAt": "2026-10-30T10:17:24.347Z",
+      "updatedAt": "2026-10-30T10:17:24.347Z"
+    }
+  ],
+  "chatMessages": [
+    {
+      "id": "chat_1793485231160_u4n6j",
+      "projectId": "proj_demo_gateway",
+      "userId": "usr_demo_01",
+      "role": "user",
+      "text": "Explain this vulnerability.",
+      "contextSnippet": "/*\n * IoT Sensor Telemetry Packet Processor\n * Target: ARM Cortex-M4 (Bare Metal)\n */\n#include <stdio.h>\n#include <string.h>\n\nvoid process_device_name(const char *input) {\n    char device_name[32]; // Fixed 32-byte stack buffer\n    \n    // VULNERABILITY (CWE-121): Unsafe strcpy() without length validation\n    strcpy(device_name, input);\n    \n    printf(\"[telemetry] Ingested device name: %s\\n\", device_name);\n}\n\nint main(int argc, char *argv[]) {\n    const char *payload = argc > 1 ? argv[1] : \"Sensor_Node_Alpha_7749\";\n    process_device_name(payload);\n    return 0;\n}",
+      "timestamp": "2026-10-31T22:20:31.160Z"
+    },
+    {
+      "id": "chat_1793485231161_lq9nr",
+      "projectId": "proj_demo_gateway",
+      "userId": "usr_demo_01",
+      "role": "assistant",
+      "text": "### CodeShield Firmware Security Assistant\n\nI have reviewed the active firmware context for `stack_overflow.c`.\n\nCurrent target issue: **Stack Buffer Overflow (CWE-121)** at line 12.\nRoot cause: Unbounded strcpy into 'device_name' from 'input' without length validation.\n\nRemediation recommendation:\n```c\n// Inspect and apply bounded buffer controls\n```\n\n\nYou can ask me to:\n- Explain specific CWE vulnerabilities in detail\n- Walk through compiler warnings or AddressSanitizer logs\n- Recommend MISRA-C compliant coding patterns\n- Analyze IoT Flash (ROM) and SRAM stack footprint tradeoffs",
+      "timestamp": "2026-10-31T22:20:31.161Z"
+    }
+  ]
+}

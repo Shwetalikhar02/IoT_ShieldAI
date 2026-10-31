@@ -1,41 +1,116 @@
-import React from 'react'
-import { Play, Zap, AlertTriangle, BarChart3, ChevronRight, User } from 'lucide-react'
+import React, { useState } from 'react'
+import {
+  Play,
+  Zap,
+  AlertTriangle,
+  BarChart3,
+  ChevronRight,
+  FolderGit2,
+  ChevronDown,
+  User,
+  LogOut,
+  Settings
+} from 'lucide-react'
 
 export default function TopNav({
   activeFile,
-  activeView,
+  activeProject,
+  projects = [],
+  onSelectProject,
+  onCreateProject,
   onRunScan,
   onRunPipeline,
   onOpenBenchmark,
   onOpenCheatingDemo,
+  onNavigateProfile,
+  onNavigateSettings,
+  onLogout,
   pipelineRunning = false,
-  status = 'Ready',
   vulnCount = 0,
-  userEmail = 'shwetalikhar.dev@gmail.com'
+  currentUser = null
 }) {
-  const getInitials = (email) => {
-    if (!email) return 'CS'
-    const parts = email.split('@')[0].split('.')
-    if (parts.length >= 2) return `${parts[0][0]}${parts[1][0]}`.toUpperCase()
-    return email.slice(0, 2).toUpperCase()
+  const [showProjectDropdown, setShowProjectDropdown] = useState(false)
+  const [showUserDropdown, setShowUserDropdown] = useState(false)
+
+  const getInitials = (name, email) => {
+    if (name) {
+      const parts = name.trim().split(' ')
+      if (parts.length >= 2) return `${parts[0][0]}${parts[1][0]}`.toUpperCase()
+      return name.slice(0, 2).toUpperCase()
+    }
+    if (email) return email.slice(0, 2).toUpperCase()
+    return 'CS'
   }
 
   return (
     <header className="h-14 bg-[#101310] border-b border-[#2B332D] px-5 flex items-center justify-between select-none shrink-0 z-20">
-      {/* Breadcrumb / Context */}
+      {/* Left: Project & File Breadcrumbs */}
       <div className="flex items-center gap-2 text-xs">
-        <span className="text-[#9AA39B] font-medium">Firmware Workspace</span>
+        {/* Project Selector Dropdown */}
+        <div className="relative">
+          <button
+            onClick={() => setShowProjectDropdown(!showProjectDropdown)}
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#181D19] border border-[#2B332D] text-[#F3F5EF] hover:border-[#B7E36A]/40 transition-colors"
+          >
+            <FolderGit2 className="w-3.5 h-3.5 text-[#B7E36A]" />
+            <span className="font-semibold text-xs max-w-[130px] truncate">
+              {activeProject?.name || 'Project'}
+            </span>
+            <ChevronDown className="w-3 h-3 text-[#626D64]" />
+          </button>
+
+          {showProjectDropdown && (
+            <div className="absolute left-0 mt-1.5 w-60 bg-[#181D19] border border-[#2B332D] rounded-xl shadow-2xl py-1.5 z-50">
+              <div className="px-3 py-1 text-[10px] font-mono text-[#626D64] uppercase border-b border-[#2B332D]">
+                Switch Project
+              </div>
+              <div className="max-h-48 overflow-y-auto divide-y divide-[#2B332D]/40">
+                {projects.map((p) => (
+                  <button
+                    key={p.id}
+                    onClick={() => {
+                      onSelectProject(p.id)
+                      setShowProjectDropdown(false)
+                    }}
+                    className={`w-full px-3 py-2 text-left text-xs flex items-center justify-between hover:bg-[#1D231E] transition-colors ${
+                      p.id === activeProject?.id ? 'text-[#B7E36A] font-semibold' : 'text-[#F3F5EF]'
+                    }`}
+                  >
+                    <span className="truncate">{p.name}</span>
+                    <span className="text-[10px] text-[#626D64] font-mono shrink-0 ml-2">
+                      {p.fileCount ?? ''}
+                    </span>
+                  </button>
+                ))}
+              </div>
+              <div className="p-1.5 border-t border-[#2B332D]">
+                <button
+                  onClick={() => {
+                    setShowProjectDropdown(false)
+                    onCreateProject()
+                  }}
+                  className="w-full btn-lime text-xs font-medium py-1"
+                >
+                  + New Project
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
         <ChevronRight className="w-3.5 h-3.5 text-[#626D64]" />
-        <span className="text-[#F3F5EF] font-semibold tracking-tight">
+
+        <span className="text-[#F3F5EF] font-semibold tracking-tight font-mono">
           {activeFile?.name || 'firmware.c'}
         </span>
+
         <span className="text-[#626D64] font-mono text-[11px] hidden sm:inline">·</span>
         <span className="text-[#9AA39B] font-mono text-[11px] hidden sm:inline">
-          ARM Cortex-M4 (Bare-Metal)
+          {activeProject?.targetArch || 'ARM Cortex-M4'}
         </span>
       </div>
 
-      {/* Actions & Profile */}
+      {/* Right Actions & Profile */}
       <div className="flex items-center gap-3">
         {/* Status indicator */}
         <div className="hidden lg:flex items-center gap-1.5 text-xs font-mono text-[#9AA39B]">
@@ -76,7 +151,7 @@ export default function TopNav({
           className="btn-quiet text-xs flex items-center gap-1.5"
         >
           <Play className="w-3.5 h-3.5 text-[#9AA39B]" />
-          <span>Scan</span>
+          <span>Scan Code</span>
         </button>
 
         {/* Run Full Pipeline */}
@@ -98,12 +173,64 @@ export default function TopNav({
           )}
         </button>
 
-        {/* User Avatar */}
-        <div
-          className="w-8 h-8 rounded-full bg-[#181D19] border border-[#2B332D] flex items-center justify-center text-[11px] font-mono font-semibold text-[#F3F5EF] cursor-pointer hover:border-[#B7E36A]/50 transition-colors"
-          title={userEmail}
-        >
-          {getInitials(userEmail)}
+        {/* User Avatar & Dropdown */}
+        <div className="relative">
+          <button
+            onClick={() => setShowUserDropdown(!showUserDropdown)}
+            className="w-8 h-8 rounded-full bg-[#181D19] border border-[#2B332D] flex items-center justify-center text-[11px] font-mono font-semibold text-[#F3F5EF] hover:border-[#B7E36A]/50 transition-colors"
+            title={currentUser?.email || 'User'}
+          >
+            {getInitials(currentUser?.name, currentUser?.email)}
+          </button>
+
+          {showUserDropdown && (
+            <div className="absolute right-0 mt-2 w-52 bg-[#181D19] border border-[#2B332D] rounded-xl shadow-2xl py-1.5 z-50 text-xs">
+              <div className="px-3 py-2 border-b border-[#2B332D]">
+                <div className="font-semibold text-[#F3F5EF] truncate">
+                  {currentUser?.name || 'Engineer'}
+                </div>
+                <div className="text-[10px] text-[#626D64] font-mono truncate">
+                  {currentUser?.email || ''}
+                </div>
+              </div>
+
+              <div className="py-1">
+                <button
+                  onClick={() => {
+                    setShowUserDropdown(false)
+                    onNavigateProfile()
+                  }}
+                  className="w-full px-3 py-1.5 text-left text-xs text-[#9AA39B] hover:text-[#F3F5EF] hover:bg-[#1D231E] flex items-center gap-2"
+                >
+                  <User className="w-3.5 h-3.5" />
+                  <span>My Profile</span>
+                </button>
+                <button
+                  onClick={() => {
+                    setShowUserDropdown(false)
+                    onNavigateSettings()
+                  }}
+                  className="w-full px-3 py-1.5 text-left text-xs text-[#9AA39B] hover:text-[#F3F5EF] hover:bg-[#1D231E] flex items-center gap-2"
+                >
+                  <Settings className="w-3.5 h-3.5" />
+                  <span>Platform Settings</span>
+                </button>
+              </div>
+
+              <div className="pt-1 border-t border-[#2B332D]">
+                <button
+                  onClick={() => {
+                    setShowUserDropdown(false)
+                    onLogout()
+                  }}
+                  className="w-full px-3 py-1.5 text-left text-xs text-[#F07878] hover:bg-[#1D231E] flex items-center gap-2"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                  <span>Sign Out</span>
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </header>
