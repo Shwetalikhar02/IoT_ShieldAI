@@ -22,18 +22,22 @@ export function generateToken(user: User): string {
 }
 
 export function setAuthCookie(res: Response, token: string) {
+  const isProduction = process.env.NODE_ENV === 'production'
   res.cookie(COOKIE_NAME, token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+    secure: isProduction,
+    sameSite: isProduction ? 'none' : 'lax',
+    path: '/',
+    maxAge: 7 * 24 * 60 * 60 * 1000
   })
 }
 
 export function clearAuthCookie(res: Response) {
   res.clearCookie(COOKIE_NAME, {
     httpOnly: true,
-    sameSite: 'lax'
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+    path: '/',
+    secure: process.env.NODE_ENV === 'production'
   })
 }
 
