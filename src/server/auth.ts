@@ -1,6 +1,7 @@
-import { Request, Response, NextFunction } from 'express'
+import type { Request, Response, NextFunction } from 'express'
 import jwt from 'jsonwebtoken'
-import { db, User } from './db'
+import { db } from './db.ts'
+import type { User } from './db.ts'
 
 const JWT_SECRET = process.env.JWT_SECRET || 'codeshield-secret-key-2026-production'
 const COOKIE_NAME = 'codeshield_token'
