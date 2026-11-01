@@ -1,18 +1,21 @@
-import express, { Request, Response } from 'express'
+import express from 'express'
+import type { Request, Response } from 'express'
 import cors from 'cors'
 import cookieParser from 'cookie-parser'
 import path from 'path'
 import bcrypt from 'bcryptjs'
 import { createServer as createViteServer } from 'vite'
-import { db, User } from './src/server/db'
-import { requireAuth, generateToken, setAuthCookie, clearAuthCookie, AuthenticatedRequest } from './src/server/auth'
-import { askGeminiSecurityAssistant } from './src/server/gemini'
+import { db } from './src/server/db.ts'
+import type { User } from './src/server/db.ts'
+import { requireAuth, generateToken, setAuthCookie, clearAuthCookie } from './src/server/auth.ts'
+import type { AuthenticatedRequest } from './src/server/auth.ts'
+import { askGeminiSecurityAssistant } from './src/server/gemini.ts'
 
 // Reuse pure analysis & verification engines
-import { analyzeFirmwareCode } from './src/services/analyzer'
-import { applyTemplateFix, refinePatchWithConstraint, generateUnifiedDiff } from './src/services/repairEngine'
-import { verifyPatchCandidate } from './src/services/verifier'
-import { calculateIoTMetrics, buildExplainabilityReport } from './src/services/metrics'
+import { analyzeFirmwareCode } from './src/services/analyzer.js'
+import { applyTemplateFix, refinePatchWithConstraint, generateUnifiedDiff } from './src/services/repairEngine.js'
+import { verifyPatchCandidate } from './src/services/verifier.js'
+import { calculateIoTMetrics, buildExplainabilityReport } from './src/services/metrics.js'
 
 const app = express()
 const PORT = 3000
@@ -956,7 +959,7 @@ async function startServer() {
   } else {
     const distPath = path.resolve(process.cwd(), 'dist')
     app.use(express.static(distPath))
-    app.get('*', (req, res) => {
+    app.use((req, res) => {
       res.sendFile(path.join(distPath, 'index.html'))
     })
   }
