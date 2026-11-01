@@ -15,8 +15,6 @@ wheels/
 pip-wheel-metadata/
 share/python-wheels/
 .installed.cfg
-lib/
-lib64/
 .eggs/
 *.manifest
 *.spec
@@ -47,7 +45,6 @@ dmypy.json
 
 # ── Node / Frontend ───────────────────────────────────────────────────────────
 node_modules/
-dist/
 .cache/
 *.log
 npm-debug.log*
@@ -71,6 +68,12 @@ a.out
 # Compiled C demo firmware (keep sources, ignore binaries)
 datasets/demo_firmware/*.out
 datasets/demo_firmware/*.o
+
+# ── Uploads & Database (generated at runtime) ─────────────────────────────────
+uploads/
+backend/uploads/
+*.db
+*.sqlite3
 
 # ── Secrets / Environment ─────────────────────────────────────────────────────
 .env
@@ -99,3 +102,4 @@ reports/*.json
 reports/*.html
 reports/*.pdf
 !reports/.gitkeep
+backend/reports/
