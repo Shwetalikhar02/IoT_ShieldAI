@@ -1,9 +1,6 @@
 import React, { useState, useEffect } from 'react'
-import NavigationSidebar from './components/NavigationSidebar'
-import TopNav from './components/TopNav'
-import FileExplorerPanel from './components/FileExplorerPanel'
+import IDELayout, { WelcomePage } from './components/IDELayout'
 import EditorView from './components/EditorView'
-import SecurityInsightsPanel from './components/SecurityInsightsPanel'
 import LandingPage from './components/LandingPage'
 import AuthModal from './components/AuthModal'
 import ProjectCreateModal from './components/ProjectCreateModal'
@@ -551,116 +548,77 @@ int main(void) {
     )
   }
 
-  // Authenticated Developer Dashboard Experience
-  return (
-    <div className="flex h-screen w-screen bg-[#101310] text-[#F3F5EF] overflow-hidden font-sans">
-      {/* 1. Categorized Navigation Sidebar */}
-      <NavigationSidebar
-        activeView={activeView}
-        onSelectView={setActiveView}
-        vulnCount={vulnerabilities.filter(v => v.status !== 'resolved').length}
-        verifiedCount={appliedPatches.length}
-        currentUser={currentUser}
-        activeProject={activeProject}
-        onCreateProject={() => setShowProjectModal(true)}
-        onOpenBenchmark={() => setShowBenchmarkModal(true)}
-        onOpenCheatingDemo={() => setShowCheatingDemo(true)}
-        onRunPipeline={handleRunPipeline}
-        onLogout={handleLogout}
-      />
+  // ── Render the editor view (for IDE mode) ──
+  const renderEditorView = () => (
+    <EditorView
+      code={currentCode}
+      onChangeCode={setCurrentCode}
+      activeFile={activeFile}
+      vulnerabilities={vulnerabilities}
+      activeVuln={activeVuln}
+      candidatePatch={candidatePatch}
+      onAcceptPatch={handleApprovePatch}
+      onRejectPatch={handleRejectPatch}
+      onTriggerQuickFix={handleTriggerQuickFix}
+      isDiffMode={isDiffMode}
+      onToggleDiffMode={() => setIsDiffMode(!isDiffMode)}
+    />
+  )
 
-      {/* Main Workspace Column */}
-      <div className="flex-1 flex flex-col h-full overflow-hidden">
-        {/* 2. Top Navigation Bar */}
-        <TopNav
-          activeFile={activeFile}
-          activeProject={activeProject}
-          projects={projects}
-          onSelectProject={(id) => {
-            setActiveProjectId(id)
-            loadProjectDetails(id)
-          }}
-          onCreateProject={() => setShowProjectModal(true)}
-          onRunScan={handleRunScan}
-          onRunPipeline={handleRunPipeline}
-          onOpenBenchmark={() => setShowBenchmarkModal(true)}
-          onOpenCheatingDemo={() => setShowCheatingDemo(true)}
-          onNavigateProfile={() => setActiveView('profile')}
-          onNavigateSettings={() => setActiveView('settings')}
-          onLogout={handleLogout}
-          pipelineRunning={pipelineRunning}
-          vulnCount={vulnerabilities.filter(v => v.status !== 'resolved').length}
-          currentUser={currentUser}
-        />
+  // ── Render the active non-editor view ──
+  const renderActiveView = () => {
+    switch (activeView) {
+      case 'overview':
+        return <WelcomePage />
 
-        {/* 3. Main Workspace Viewport */}
-        <div className="flex-1 flex overflow-hidden">
-          {activeView === 'overview' && (
-            <OverviewView
-              currentUser={currentUser}
-              projects={projects}
-              activeProject={activeProject}
-              files={files}
-              vulnerabilities={vulnerabilities}
-              patches={appliedPatches}
-              verifications={verificationsHistory}
-              metrics={metrics}
-              onNavigateToExplorer={() => setActiveView('explorer')}
-              onNavigateToProjects={() => setActiveView('projects')}
-              onSelectProject={(id) => {
-                setActiveProjectId(id)
-                loadProjectDetails(id)
-              }}
-              onCreateProject={() => setShowProjectModal(true)}
-              onRunScan={handleRunScan}
-              onRunPipeline={handleRunPipeline}
-            />
-          )}
+      case 'projects':
+        return (
+          <ProjectsView
+            projects={projects}
+            activeProjectId={activeProjectId}
+            onSelectProject={(id) => {
+              setActiveProjectId(id)
+              loadProjectDetails(id)
+              setActiveView('overview')
+            }}
+            onCreateProject={() => setShowProjectModal(true)}
+            onUpdateProject={handleUpdateProject}
+            onDeleteProject={handleDeleteProject}
+          />
+        )
 
-          {activeView === 'projects' && (
-            <ProjectsView
-              projects={projects}
-              activeProjectId={activeProjectId}
-              onSelectProject={(id) => {
-                setActiveProjectId(id)
-                loadProjectDetails(id)
-                setActiveView('overview')
-              }}
-              onCreateProject={() => setShowProjectModal(true)}
-              onUpdateProject={handleUpdateProject}
-              onDeleteProject={handleDeleteProject}
-            />
-          )}
+      case 'findings':
+        return (
+          <FindingsView
+            vulnerabilities={vulnerabilities}
+            onInspectVuln={handleInspectVuln}
+            onTriggerFix={handleTriggerFixFromView}
+          />
+        )
 
-          {activeView === 'explorer' && (
-            <>
-              {/* File Explorer Panel */}
-              <FileExplorerPanel
-                files={files}
-                activeFileId={activeFileId}
-                onSelectFile={setActiveFileId}
-                onFileUpload={handleFileUpload}
-                onNewFile={handleNewFile}
-                vulnerabilities={vulnerabilities}
-              />
+      case 'repair':
+        return (
+          <CodeReviewView
+            vulnerabilities={vulnerabilities}
+            activeVuln={activeVuln}
+            candidatePatch={candidatePatch}
+            appliedReviews={appliedReviews}
+            onApproveFix={handleApprovePatch}
+            onRejectFix={handleRejectPatch}
+            onGenerateFix={handleTriggerQuickFix}
+            onRequestRefinement={handleSendConstraint}
+            onRunVerification={() => runVerification(candidatePatch, currentCode)}
+            isVerifying={isVerifying}
+            verificationResult={verificationResult}
+            onSelectVuln={setActiveVuln}
+          />
+        )
 
-              {/* Source Code Editor */}
-              <EditorView
-                code={currentCode}
-                onChangeCode={setCurrentCode}
-                activeFile={activeFile}
-                vulnerabilities={vulnerabilities}
-                activeVuln={activeVuln}
-                candidatePatch={candidatePatch}
-                onAcceptPatch={handleApprovePatch}
-                onRejectPatch={handleRejectPatch}
-                onTriggerQuickFix={handleTriggerQuickFix}
-                isDiffMode={isDiffMode}
-                onToggleDiffMode={() => setIsDiffMode(!isDiffMode)}
-              />
-
-              {/* Security Insights & AI Assistant on Right */}
-              <SecurityInsightsPanel
+      case 'assistant':
+        return (
+          <div className="flex-1 h-full p-6 flex flex-col bg-[#101310]">
+            <div className="max-w-4xl w-full mx-auto flex-1 rounded-2xl overflow-hidden border border-[#2B332D] shadow-2xl flex flex-col">
+              <SecurityInsightsPanelWrapper
                 activeFile={activeFile}
                 vulnerabilities={vulnerabilities}
                 activeVuln={activeVuln}
@@ -671,98 +629,130 @@ int main(void) {
                 onRunVerify={() => runVerification(candidatePatch, currentCode)}
                 isVerifying={isVerifying}
                 projectId={activeProjectId}
+                defaultTab="assistant"
               />
-            </>
-          )}
-
-          {activeView === 'findings' && (
-            <FindingsView
-              vulnerabilities={vulnerabilities}
-              onInspectVuln={handleInspectVuln}
-              onTriggerFix={handleTriggerFixFromView}
-            />
-          )}
-
-          {activeView === 'repair' && (
-            <CodeReviewView
-              vulnerabilities={vulnerabilities}
-              activeVuln={activeVuln}
-              candidatePatch={candidatePatch}
-              appliedReviews={appliedReviews}
-              onApproveFix={handleApprovePatch}
-              onRejectFix={handleRejectPatch}
-              onGenerateFix={handleTriggerQuickFix}
-              onRequestRefinement={handleSendConstraint}
-              onRunVerification={() => runVerification(candidatePatch, currentCode)}
-              isVerifying={isVerifying}
-              verificationResult={verificationResult}
-              onSelectVuln={setActiveVuln}
-            />
-          )}
-
-          {activeView === 'assistant' && (
-            <div className="flex-1 h-full p-6 flex flex-col bg-[#101310]">
-              <div className="max-w-4xl w-full mx-auto flex-1 rounded-2xl overflow-hidden border border-[#2B332D] shadow-2xl flex flex-col">
-                <SecurityInsightsPanel
-                  activeFile={activeFile}
-                  vulnerabilities={vulnerabilities}
-                  activeVuln={activeVuln}
-                  candidatePatch={candidatePatch}
-                  verificationResult={verificationResult}
-                  metrics={metrics}
-                  onTriggerQuickFix={handleTriggerQuickFix}
-                  onRunVerify={() => runVerification(candidatePatch, currentCode)}
-                  isVerifying={isVerifying}
-                  projectId={activeProjectId}
-                  defaultTab="assistant"
-                />
-              </div>
             </div>
-          )}
+          </div>
+        )
 
-          {activeView === 'verify' && (
-            <VerificationConsoleView
-              verificationResult={verificationResult}
-              onRunVerify={() => runVerification(candidatePatch, currentCode)}
-              isVerifying={isVerifying}
-              onOpenCheatingDemo={() => setShowCheatingDemo(true)}
-            />
-          )}
+      case 'verify':
+        return (
+          <VerificationConsoleView
+            verificationResult={verificationResult}
+            onRunVerify={() => runVerification(candidatePatch, currentCode)}
+            isVerifying={isVerifying}
+            onOpenCheatingDemo={() => setShowCheatingDemo(true)}
+          />
+        )
 
-          {activeView === 'reports' && (
-            <ReportsView
-              activeProject={activeProject}
-              activeFile={activeFile}
-              vulnerabilities={vulnerabilities}
-              patches={appliedPatches.length > 0 ? appliedPatches : candidatePatch ? [candidatePatch] : []}
-              verifications={verificationsHistory.length > 0 ? verificationsHistory : verificationResult ? [verificationResult] : []}
-              reviews={appliedReviews}
-              metrics={metrics}
-              explanation={reportExplanation}
-            />
-          )}
+      case 'reports':
+        return (
+          <ReportsView
+            activeProject={activeProject}
+            activeFile={activeFile}
+            vulnerabilities={vulnerabilities}
+            patches={appliedPatches.length > 0 ? appliedPatches : candidatePatch ? [candidatePatch] : []}
+            verifications={verificationsHistory.length > 0 ? verificationsHistory : verificationResult ? [verificationResult] : []}
+            reviews={appliedReviews}
+            metrics={metrics}
+            explanation={reportExplanation}
+          />
+        )
 
-          {activeView === 'reviews' && (
-            <UserReviewsView currentUser={currentUser} />
-          )}
+      case 'reviews':
+        return <UserReviewsView currentUser={currentUser} />
 
-          {activeView === 'profile' && (
-            <ProfileView
-              currentUser={currentUser}
-              projects={projects}
-              onUpdateUser={setCurrentUser}
-              onLogout={handleLogout}
-            />
-          )}
+      case 'profile':
+        return (
+          <ProfileView
+            currentUser={currentUser}
+            projects={projects}
+            onUpdateUser={setCurrentUser}
+            onLogout={handleLogout}
+          />
+        )
 
-          {activeView === 'settings' && (
-            <SettingsView
-              currentProvider={provider}
-              onSelectProvider={setProvider}
-            />
-          )}
-        </div>
-      </div>
+      case 'settings':
+        return (
+          <SettingsView
+            currentProvider={provider}
+            onSelectProvider={setProvider}
+          />
+        )
+
+      default:
+        return <WelcomePage />
+    }
+  }
+
+  // Authenticated IDE Experience
+  return (
+    <>
+      <IDELayout
+        // Auth
+        currentUser={currentUser}
+        onLogout={handleLogout}
+
+        // Navigation
+        activeView={activeView}
+        onSelectView={setActiveView}
+
+        // Projects
+        activeProject={activeProject}
+        projects={projects}
+        onSelectProject={(id) => {
+          setActiveProjectId(id)
+          loadProjectDetails(id)
+        }}
+        onCreateProject={() => setShowProjectModal(true)}
+
+        // Files
+        files={files}
+        activeFileId={activeFileId}
+        activeFile={activeFile}
+        onSelectFile={setActiveFileId}
+        onFileUpload={handleFileUpload}
+        onNewFile={handleNewFile}
+
+        // Editor
+        currentCode={currentCode}
+        onChangeCode={setCurrentCode}
+        candidatePatch={candidatePatch}
+        isDiffMode={isDiffMode}
+        onToggleDiffMode={() => setIsDiffMode(!isDiffMode)}
+        onAcceptPatch={handleApprovePatch}
+        onRejectPatch={handleRejectPatch}
+
+        // Analysis
+        vulnerabilities={vulnerabilities}
+        activeVuln={activeVuln}
+        onTriggerQuickFix={handleTriggerQuickFix}
+        onInspectVuln={handleInspectVuln}
+
+        // Pipeline
+        pipelineRunning={pipelineRunning}
+        onRunScan={handleRunScan}
+        onRunPipeline={handleRunPipeline}
+
+        // Verification
+        verificationResult={verificationResult}
+        isVerifying={isVerifying}
+        onRunVerify={() => runVerification(candidatePatch, currentCode)}
+
+        // Metrics
+        metrics={metrics}
+
+        // Modals
+        onOpenBenchmark={() => setShowBenchmarkModal(true)}
+        onOpenCheatingDemo={() => setShowCheatingDemo(true)}
+
+        // Project ID
+        projectId={activeProjectId}
+
+        // View Renderers
+        renderEditorView={renderEditorView}
+        renderActiveView={renderActiveView}
+      />
 
       {/* Modals */}
       <ProjectCreateModal
@@ -780,6 +770,20 @@ int main(void) {
         isOpen={showCheatingDemo}
         onClose={() => setShowCheatingDemo(false)}
       />
-    </div>
+    </>
   )
+}
+
+// Lazy wrapper for SecurityInsightsPanel to avoid circular dependency
+function SecurityInsightsPanelWrapper(props) {
+  const [Panel, setPanel] = useState(null)
+
+  useEffect(() => {
+    import('./components/SecurityInsightsPanel').then(mod => {
+      setPanel(() => mod.default)
+    })
+  }, [])
+
+  if (!Panel) return <div className="flex-1 flex items-center justify-center text-[#626D64] text-xs">Loading assistant...</div>
+  return <Panel {...props} />
 }
