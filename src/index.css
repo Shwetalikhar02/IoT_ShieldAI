@@ -1,0 +1,171 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    box-sizing: border-box;
+    border-color: #2B332D;
+  }
+  
+  html {
+    scroll-behavior: smooth;
+    height: 100%;
+    color-scheme: dark;
+  }
+  
+  body {
+    background-color: #101310;
+    color: #F3F5EF;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    min-height: 100vh;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Refined quiet scrollbar */
+  ::-webkit-scrollbar {
+    width: 5px;
+    height: 5px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: rgba(154, 163, 155, 0.2);
+    border-radius: 9999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(154, 163, 155, 0.35);
+  }
+}
+
+@layer components {
+  /* Minimalist Primary Action Button */
+  .btn-lime {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.375rem;
+    padding: 0.4375rem 0.875rem;
+    border-radius: 0.5rem;
+    font-weight: 500;
+    font-size: 0.8125rem;
+    color: #101310;
+    background-color: #B7E36A;
+    border: 1px solid transparent;
+    transition: all 0.15s ease-out;
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+  }
+  .btn-lime:hover:not(:disabled) {
+    background-color: #C6EE7D;
+    transform: translateY(-0.5px);
+  }
+  .btn-lime:active:not(:disabled) {
+    transform: translateY(0);
+  }
+  .btn-lime:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+
+  /* Subtle Ghost / Secondary Action Button */
+  .btn-quiet {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.375rem;
+    padding: 0.4375rem 0.75rem;
+    border-radius: 0.5rem;
+    font-weight: 500;
+    font-size: 0.8125rem;
+    color: #F3F5EF;
+    background-color: #181D19;
+    border: 1px solid #2B332D;
+    transition: all 0.15s ease-out;
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+  }
+  .btn-quiet:hover:not(:disabled) {
+    background-color: #1D231E;
+    border-color: rgba(183, 227, 106, 0.3);
+    color: #ffffff;
+  }
+  .btn-quiet:active:not(:disabled) {
+    background-color: #181D19;
+  }
+  .btn-quiet:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+
+  /* Minimal card container */
+  .cs-card-panel {
+    background-color: #1D231E;
+    border: 1px solid #2B332D;
+    border-radius: 0.625rem;
+  }
+
+  /* Quiet text badge */
+  .badge-minimal {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.6875rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 500;
+    color: #9AA39B;
+  }
+
+  .badge-critical-subtle {
+    color: #F07878;
+    background-color: rgba(240, 120, 120, 0.1);
+    border: 1px solid rgba(240, 120, 120, 0.25);
+    padding: 0.125rem 0.375rem;
+    border-radius: 0.25rem;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+  }
+
+  .badge-high-subtle {
+    color: #E5A854;
+    background-color: rgba(229, 168, 84, 0.1);
+    border: 1px solid rgba(229, 168, 84, 0.25);
+    padding: 0.125rem 0.375rem;
+    border-radius: 0.25rem;
+    font-size: 0.6875rem;
+    font-weight: 600;
+  }
+
+  .badge-verified-subtle {
+    color: #B7E36A;
+    background-color: rgba(183, 227, 106, 0.1);
+    border: 1px solid rgba(183, 227, 106, 0.25);
+    padding: 0.125rem 0.375rem;
+    border-radius: 0.25rem;
+    font-size: 0.6875rem;
+    font-weight: 600;
+  }
+
+  /* Subtle spinner */
+  .cs-spinner {
+    display: inline-block;
+    width: 0.875rem;
+    height: 0.875rem;
+    border: 1.5px solid rgba(183, 227, 106, 0.25);
+    border-top-color: #B7E36A;
+    border-radius: 9999px;
+    animation: cs-spin 0.75s linear infinite;
+  }
+}
+
+@keyframes cs-spin {
+  to { transform: rotate(360deg); }
+}
