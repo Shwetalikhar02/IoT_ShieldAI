@@ -1,6 +1,6 @@
 # IoT ShieldAI — REST API Contract
 
-Base URL: `http://localhost:8000`
+Base URL: 'https://iot-shieldai-2ex0.onrender.com/api'
 
 Interactive OpenAPI Documentation:
 - Swagger UI: `http://localhost:8000/docs`
